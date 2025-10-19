@@ -1,0 +1,11 @@
+Model Information:
+* title:	Vehicle_Factory
+* source:	https://sketchfab.com/3d-models/vehicle-factory-62c4768df1334909a3d206dcf610ea7e
+* author:	Rakshaan (https://sketchfab.com/rakshaan)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Vehicle_Factory" (https://sketchfab.com/3d-models/vehicle-factory-62c4768df1334909a3d206dcf610ea7e) by Rakshaan (https://sketchfab.com/rakshaan) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

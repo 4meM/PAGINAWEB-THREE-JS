@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Graph Menu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+    <!-- UI Overlay (no interfiere con interacciones 3D) -->
+    <div class="hud">
+        <div class="brand">Game Studio</div>
+        <div class="controls-hint">WASD · Espacio · Shift · Esc</div>
+    </div>
+            <!-- Blinding flash overlay for portal transitions -->
+            <div id="flash" class="flash" aria-hidden="true"></div>
+
+            <!-- Section overlays shown after portal entry -->
+            <div id="section-inicio" class="section" aria-hidden="true">
+                <div class="section__card">
+                    <h2>Inicio · ¿Quiénes somos?</h2>
+                    <p>
+                        Somos un estudio enfocado en experiencias interactivas que combinan arte, tecnología y usabilidad. 
+                        Ayudamos a empresas a comunicar sus ideas a través de prototipos 3D, juegos serios y simulaciones.
+                    </p>
+                    <p>
+                        Servicios clave: diseño UI/UX, gamificación, visualización 3D en Web, y pruebas con usuarios. 
+                        Explora los otros módulos para ver un demo de juego y una innovación en IHC.
+                    </p>
+                    <button data-close>Cerrar</button>
+                </div>
+            </div>
+            <div id="section-juego" class="section" aria-hidden="true">
+                <div class="section__card">
+                    <h2>Juego · Proyecto en desarrollo</h2>
+                    <p>
+                        Estamos construyendo un juego de exploración en una estación espacial. El foco está en
+                        movilidad fluida (WASD + salto), portales de transición inmersiva y retos de precisión.
+                    </p>
+                    <p>
+                        Estado actual: prototipo jugable con pasarelas uniformes, pads estáticos, y portales 
+                        de entrada/salida sin fricción. Próximos pasos: narrativa ligera, objetivos progresivos 
+                        y telemetría anónima para iterar sobre dificultad.
+                    </p>
+                    <button data-close>Cerrar</button>
+                </div>
+            </div>
+            <div id="section-proyecto" class="section" aria-hidden="true">
+                <div class="section__card">
+                    <h2>Proyecto IHC · Innovación</h2>
+                    <p>
+                        Propuesta: “Portales accesibles” — micro-interacciones que reducen el error humano 
+                        al entrar/salir de espacios virtuales. Combina detección por cruce de plano + proximidad,
+                        realinea altura al instante y ofrece pistas visuales sutiles.
+                    </p>
+                    <p>
+                        Beneficio en IHC: mejora la percepción de control, minimiza caídas accidentales y 
+                        mantiene el flujo atencional. Se puede extrapolar a recorridos museográficos, training 
+                        industrial y visualización de datos inmersiva.
+                    </p>
+                    <button data-close>Cerrar</button>
+                </div>
+            </div>
+    <div id="prompt" class="prompt" aria-live="polite" aria-hidden="true">Presiona Enter para entrar</div>
+    <div class="vignette" aria-hidden="true"></div>
+    <script type="module" src="main.js?v=2"></script>
+</body>
+</html>
