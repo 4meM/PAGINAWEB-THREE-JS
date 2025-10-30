@@ -3,6 +3,9 @@ import { EffectComposer } from 'https://cdn.skypack.dev/three@0.132.2/examples/j
 import { RenderPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/loaders/GLTFLoader.js';
+import * as InicioComponent from './components/inicio.js';
+import * as JuegoComponent from './components/juego.js';
+import * as ProyectoComponent from './components/proyecto.js';
 
 let scene, camera, renderer, composer, bloomPass;
 let spaceRoot, interiorRoot;
@@ -14,6 +17,9 @@ const mouse = new THREE.Vector2();
 let hoveredNode = null;
 let clock = new THREE.Clock();
 let lastCamPos = null; // previous camera position for portal crossing checks
+let presentationPlaying = false;
+let presentationAbort = false;
+let presentationCooldownUntil = 0;
 // WASD movement state
 const keys = { w: false, a: false, s: false, d: false, q: false, e: false, shift: false };
 let baseSpeed = 6; // units per second
@@ -86,8 +92,8 @@ function init() {
     scene.add(interiorRoot);
 
     // Camera
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 26); // Vista inicial más conveniente
+    camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 20); // Vista inicial más conveniente
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -138,12 +144,30 @@ function init() {
     composer.addPass(bloomPass);
     // Posición inicial: sobre la base del núcleo (neutral)
     const startY = ((hubInfo && hubInfo.deckTopY) ? hubInfo.deckTopY : 0.63) + player.eyeHeight;
-    camera.position.set(0, startY, 0.8);
+    camera.position.set(0, startY, 1.5);
     lastCamPos = camera.position.clone();
     setYawPitchToLookAt(new THREE.Vector3(0, startY, 0));
+    // Snap to nearest ground to avoid an initial falling glitch
+    try {
+        const snapped = resolveSpaceGround(camera.position, player, { probe: true, prevY: camera.position.y });
+        if (snapped && snapped.position) {
+            camera.position.copy(snapped.position);
+            player.onGround = snapped.onGround || true;
+            player.velY = 0;
+        }
+    } catch (e) {
+        // ignore if resolve not ready
+    }
     // Start grounded on the hub
     player.velY = 0;
     player.onGround = true;
+
+    // Ensure the camera is snapped to the nearest ground before allowing movement
+    // This retries for a short time while the scene settles (GLTF loads, geometry added)
+    ensureInitialGroundSnap().then(() => {
+        // Start the intro after a short pause so the scene is stable
+        setTimeout(() => { playIntroPresentation(); }, 600);
+    });
 
     // Event Listeners
     window.addEventListener('resize', onWindowResize, false);
@@ -156,6 +180,8 @@ function init() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
+    // Note: presentation cannot be skipped — player control is enabled only after the intro orbit completes
+
     // Wire close buttons for section overlays if present
     Object.values(ui.sectionOverlays).forEach(el => {
         const btn = el.querySelector('[data-close]');
@@ -163,6 +189,193 @@ function init() {
     });
 
     // No start overlay; pointer lock is requested on first mousedown
+}
+
+// Presentation helpers ------------------------------------------------------
+function smoothCameraFPAwait(fromPos, toPos, lookAtPoint, durationMs = 1000) {
+    return new Promise((resolve) => {
+        smoothCameraFP(fromPos.clone(), toPos.clone(), lookAtPoint.clone(), durationMs);
+        // resolve after duration (small buffer)
+        setTimeout(() => resolve(), durationMs + 80);
+    });
+}
+
+async function playIntroPresentation() {
+    // Single 360° orbit around the hub nucleus with short zooms when passing each portal.
+    if (!campus || !campus.portals) return;
+    presentationPlaying = true;
+    presentationAbort = false;
+    ui.isTransition = true; // lock movement and input during presentation
+    // clear any movement keys
+    keys.w = keys.a = keys.s = keys.d = keys.shift = false;
+
+    const center = new THREE.Vector3(0, (hubInfo && hubInfo.deckTopY) ? hubInfo.deckTopY : 0.63, 0);
+    // Ensure the camera orbit uses a safe starting height above the deck
+    const deckTopY = (hubInfo && hubInfo.deckTopY) ? hubInfo.deckTopY : 0.63;
+    const safeEyeY = deckTopY + player.eyeHeight + 0.6; // keep camera comfortably above deck
+    const startPos = camera.position.clone();
+    if (startPos.y < safeEyeY) startPos.y = safeEyeY;
+    // relative vector on XZ plane
+    const rel = new THREE.Vector3(startPos.x - center.x, 0, startPos.z - center.z);
+    const computedRadius = Math.sqrt(rel.x * rel.x + rel.z * rel.z) || 6.0;
+    // Ensure radius is outside the hub deck radius to avoid intersecting the platform
+    const hubRadius = (hubInfo && hubInfo.deckRadius) ? hubInfo.deckRadius : 6.8;
+    const baseRadius = Math.max(computedRadius, hubRadius + 3.2);
+    const startAngle = Math.atan2(rel.z, rel.x);
+    const duration = 6000; // milliseconds for full 360
+
+    // Precompute portal angles and state
+    const portals = campus.portals.map((p, idx) => ({
+        p,
+        angle: Math.atan2(p.group.position.z - center.z, p.group.position.x - center.x),
+        triggered: false,
+        idx
+    }));
+
+    // Zoom state machine used during the orbit
+    const zoomInMs = 480, zoomHoldMs = 520, zoomOutMs = 480;
+    const zoomTotal = zoomInMs + zoomHoldMs + zoomOutMs;
+    const zoomFactor = 0.45; // how much to reduce radius when zooming
+    let zoomState = { active: false, startTime: 0, smallRadius: baseRadius * zoomFactor, portalIdx: -1 };
+
+    // Angle normalization helper: returns shortest signed difference a - b in [-PI,PI]
+    function angleDiff(a, b) {
+        let d = a - b;
+        while (d <= -Math.PI) d += Math.PI * 2;
+        while (d > Math.PI) d -= Math.PI * 2;
+        return d;
+    }
+
+    await new Promise((resolve) => {
+        const t0 = performance.now();
+        function step(now) {
+            const t = Math.min(1, (now - t0) / duration);
+            const ang = startAngle + t * Math.PI * 2;
+
+            // start with base radius and allow zoomState to override
+            let radiusCur = baseRadius;
+            if (zoomState.active) {
+                const ze = now - zoomState.startTime;
+                if (ze < 0) radiusCur = baseRadius;
+                else if (ze < zoomInMs) {
+                    radiusCur = THREE.MathUtils.lerp(baseRadius, zoomState.smallRadius, ze / zoomInMs);
+                } else if (ze < zoomInMs + zoomHoldMs) {
+                    radiusCur = zoomState.smallRadius;
+                } else if (ze < zoomTotal) {
+                    radiusCur = THREE.MathUtils.lerp(zoomState.smallRadius, baseRadius, (ze - (zoomInMs + zoomHoldMs)) / zoomOutMs);
+                } else {
+                    // finish zoom
+                    portals[zoomState.portalIdx].triggered = true;
+                    zoomState.active = false;
+                    zoomState.portalIdx = -1;
+                    radiusCur = baseRadius;
+                }
+            }
+
+            camera.position.x = center.x + radiusCur * Math.cos(ang);
+            camera.position.z = center.z + radiusCur * Math.sin(ang);
+            // Ensure camera Y stays above the deck during the orbit
+            camera.position.y = Math.max(startPos.y + Math.sin(t * Math.PI * 2) * 0.06, deckTopY + player.eyeHeight + 0.35);
+            const look = center.clone(); look.y = center.y + 0.2;
+            setYawPitchToLookAt(look);
+
+            // Check for portal trigger: if a portal hasn't been zoomed and angle is close, start zoom
+            if (!zoomState.active) {
+                for (let i = 0; i < portals.length; i++) {
+                    const pr = portals[i];
+                    if (pr.triggered) continue;
+                    const d = angleDiff(ang, pr.angle);
+                    const triggerRadius = 0.18; // radians ~10 degrees
+                    if (Math.abs(d) < triggerRadius) {
+                        // Start zoom for this portal
+                        zoomState.active = true;
+                        zoomState.startTime = now - (Math.abs(d) / (2 * Math.PI) * duration) * 0.0; // start now
+                        zoomState.smallRadius = baseRadius * zoomFactor;
+                        zoomState.portalIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            if (t < 1) requestAnimationFrame(step);
+            else {
+                // ensure any active zoom finishes immediately
+                zoomState.active = false;
+                presentationPlaying = false;
+                presentationAbort = false;
+                // snap back to original start position and look at center
+                camera.position.copy(startPos);
+                setYawPitchToLookAt(center.clone());
+                // ensure player is grounded and freeze physics briefly to avoid a small fall glitch
+                try {
+                    player.velY = 0;
+                    player.onGround = true;
+                    lastCamPos = camera.position.clone();
+                } catch (e) {}
+                // set a short cooldown during which physics/movement won't be applied
+                presentationCooldownUntil = performance.now() + 420;
+                ui.isTransition = false;
+                resolve();
+            }
+        }
+        requestAnimationFrame(step);
+    });
+}
+
+function endPresentation() {
+    presentationAbort = true;
+    presentationPlaying = false;
+    ui.isTransition = false;
+}
+
+// Ensure initial ground snap: try a few times while the scene finishes building.
+function ensureInitialGroundSnap(maxAttempts = 12, intervalMs = 120) {
+    return new Promise((resolve) => {
+        let attempts = 0;
+        ui.isTransition = true; // keep input locked until snap completes
+        const trySnap = () => {
+            attempts++;
+            try {
+                // If there are no spaceGrounds yet, wait for them
+                if (!spaceGrounds || spaceGrounds.length === 0) {
+                    if (attempts >= maxAttempts) {
+                        ui.isTransition = false;
+                        resolve();
+                    } else setTimeout(trySnap, intervalMs);
+                    return;
+                }
+                const snapped = resolveSpaceGround(camera.position, player, { probe: true, prevY: camera.position.y });
+                if (snapped && snapped.position) {
+                    camera.position.copy(snapped.position);
+                    player.onGround = !!snapped.onGround;
+                    player.velY = 0;
+                    lastCamPos = camera.position.clone();
+                    ui.isTransition = false;
+                    resolve();
+                    return;
+                }
+            } catch (e) {
+                // ignore and retry
+            }
+            if (attempts >= maxAttempts) {
+                // Fallback: place camera at a safe spawn above the hub deck
+                try {
+                    const deckTopY = (hubInfo && hubInfo.deckTopY) ? hubInfo.deckTopY : 0.63;
+                    const hubRadius = (hubInfo && hubInfo.deckRadius) ? hubInfo.deckRadius : 6.8;
+                    const fallback = new THREE.Vector3(0, deckTopY + player.eyeHeight + 0.4, hubRadius + 3.6);
+                    camera.position.copy(fallback);
+                    lastCamPos = camera.position.clone();
+                    player.onGround = true;
+                    player.velY = 0;
+                } catch (e) {
+                    // ignore
+                }
+                ui.isTransition = false;
+                resolve();
+            } else setTimeout(trySnap, intervalMs);
+        };
+        trySnap();
+    });
 }
 
 function createStarfield() {
@@ -250,7 +463,7 @@ function createNode(name, position, color) {
 function createTextSprite(text) {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    const fontSize = 60; // base font size
+    const fontSize = 100; // base font size
     const padding = 24;
     const DPR = 2; // high DPI for crisp text
     context.font = `700 ${fontSize}px "Orbitron", sans-serif`;
@@ -263,8 +476,8 @@ function createTextSprite(text) {
     canvas.height = (fontSize + padding * 2) * DPR;
     context.scale(DPR, DPR);
     
-    // Redraw font after canvas resize
-    context.font = `700 ${fontSize}px "Orbitron", sans-serif`;
+    const size = fontSize || 80;
+    context.font = `700 ${size}px "Orbitron", sans-serif`;
     context.textBaseline = 'top';
     
     // Outer glow
@@ -330,7 +543,7 @@ function buildStation() {
     // Save hub dimensions for space physics
     if (hub.userData && hub.userData.hub) hubInfo = hub.userData.hub;
 
-    const R = 36; // increase spacing so modules aren't cramped
+    const R = 22; // increase spacing so modules aren't cramped
     const angles = [0, (2*Math.PI)/3, (4*Math.PI)/3];
     const defs = [
         {
@@ -527,7 +740,7 @@ function createStationModule(name, position, color, options = {}) {
     g.add(band2);
 
     const label = createTextSprite(name);
-    label.position.set(0, 3.8, 0);
+    label.position.set(0, 6.8, 0);
     g.add(label);
 
     // Nav blink lights
@@ -922,6 +1135,11 @@ function onClick(event) {
     if (intersects.length > 0) {
         const selectedNode = intersects[0].object;
         console.log(`Clicked on: ${selectedNode.name}`);
+        // If the object registered an onClick handler, call it
+        if (selectedNode.userData && typeof selectedNode.userData.onClick === 'function') {
+            try { selectedNode.userData.onClick(selectedNode); } catch (e) { console.warn('onClick handler error', e); }
+            return;
+        }
 
         // En modo primera persona, el clic se usa solo para mirar.
         // Si quieres, aquí podemos abrir secciones con tecla 'Enter' o doble click.
@@ -1017,6 +1235,8 @@ function animate() {
 
 function updateWASD(delta) {
     if (ui.isTransition) return; // lock movement during transitions
+    // During intro cooldown, ignore physics/movement to avoid a tiny fall
+    if (performance.now() < (presentationCooldownUntil || 0)) return;
     // Horizontal speed always computed; vertical handled via physics in space
     const speed = (keys.shift ? baseSpeed * 2.2 : baseSpeed) * delta;
 
@@ -1369,6 +1589,7 @@ function leaveSection() {
 }
 
 function buildInteriorRoom(name) {
+    // Create the shared room shell (floor, ceiling, walls, trims, exit)
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x0b0f14, roughness: 0.9, metalness: 0.05 });
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x111922, roughness: 0.6, metalness: 0.1, emissive: 0x0a2230, emissiveIntensity: 0.15 });
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x6cf9ff, emissive: 0x6cf9ff, emissiveIntensity: 0.6, metalness: 0.8, roughness: 0.25 });
@@ -1405,6 +1626,37 @@ function buildInteriorRoom(name) {
     exit.position.set(0, 1.6, 8.0);
     interiorRoot.add(exit);
     interior.exit = { position: exit.position.clone(), radius: 1.2 };
+
+    // After building the shell, delegate room-specific content to the component
+    const key = (name || '').toLowerCase();
+    const helpers = {
+        addColliderFromMesh,
+        createTextSprite,
+        THREE,
+        gltfLoader,
+        // registerInteractive(mesh, onClick): registers a mesh for raycast clicks and stores handler
+        registerInteractive: (mesh, onClick) => {
+            try {
+                if (mesh) {
+                    interactiveObjects.push(mesh);
+                    mesh.userData.onClick = onClick;
+                }
+            } catch (e) { console.warn('registerInteractive failed', e); }
+        }
+    };
+    try {
+        if (key === 'inicio' && InicioComponent && typeof InicioComponent.addInicio === 'function') {
+            InicioComponent.addInicio(interiorRoot, helpers);
+        } else if (key === 'juego' && JuegoComponent && typeof JuegoComponent.addJuego === 'function') {
+            JuegoComponent.addJuego(interiorRoot, helpers);
+        } else if (key === 'proyecto' && ProyectoComponent && typeof ProyectoComponent.addProyecto === 'function') {
+            ProyectoComponent.addProyecto(interiorRoot, helpers);
+        } else {
+            // default: nothing more to add
+        }
+    } catch (e) {
+        console.warn('Error building room content for', name, e);
+    }
 }
 
 // Interior exit detection and transition back to space
