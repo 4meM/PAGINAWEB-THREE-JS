@@ -1222,7 +1222,13 @@ function animate() {
     
     checkIntersections();
     updatePortals();
-    if (ui.mode === 'interior') updateInteriorExit();
+    if (ui.mode === 'interior') {
+        updateInteriorExit();
+        // Actualizar detección de portales interiores si existe
+        if (interiorRoot.userData.updateJuegoPortals) {
+            interiorRoot.userData.updateJuegoPortals(camera);
+        }
+    }
     if (composer) {
         composer.render();
     } else {
