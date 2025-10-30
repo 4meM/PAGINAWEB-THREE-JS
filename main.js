@@ -86,8 +86,8 @@ function init() {
     scene.add(interiorRoot);
 
     // Camera
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 26); // Vista inicial más conveniente
+    camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 20); // Vista inicial más conveniente
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -138,7 +138,7 @@ function init() {
     composer.addPass(bloomPass);
     // Posición inicial: sobre la base del núcleo (neutral)
     const startY = ((hubInfo && hubInfo.deckTopY) ? hubInfo.deckTopY : 0.63) + player.eyeHeight;
-    camera.position.set(0, startY, 0.8);
+    camera.position.set(0, startY, 1.5);
     lastCamPos = camera.position.clone();
     setYawPitchToLookAt(new THREE.Vector3(0, startY, 0));
     // Start grounded on the hub
@@ -250,7 +250,7 @@ function createNode(name, position, color) {
 function createTextSprite(text) {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    const fontSize = 60; // base font size
+    const fontSize = 100; // base font size
     const padding = 24;
     const DPR = 2; // high DPI for crisp text
     context.font = `700 ${fontSize}px "Orbitron", sans-serif`;
@@ -263,8 +263,8 @@ function createTextSprite(text) {
     canvas.height = (fontSize + padding * 2) * DPR;
     context.scale(DPR, DPR);
     
-    // Redraw font after canvas resize
-    context.font = `700 ${fontSize}px "Orbitron", sans-serif`;
+    const size = fontSize || 80;
+    context.font = `700 ${size}px "Orbitron", sans-serif`;
     context.textBaseline = 'top';
     
     // Outer glow
@@ -330,7 +330,7 @@ function buildStation() {
     // Save hub dimensions for space physics
     if (hub.userData && hub.userData.hub) hubInfo = hub.userData.hub;
 
-    const R = 36; // increase spacing so modules aren't cramped
+    const R = 22; // increase spacing so modules aren't cramped
     const angles = [0, (2*Math.PI)/3, (4*Math.PI)/3];
     const defs = [
         {
@@ -527,7 +527,7 @@ function createStationModule(name, position, color, options = {}) {
     g.add(band2);
 
     const label = createTextSprite(name);
-    label.position.set(0, 3.8, 0);
+    label.position.set(0, 6.8, 0);
     g.add(label);
 
     // Nav blink lights
