@@ -68,14 +68,18 @@ canvas {
 .flash {
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.85) 20%, rgba(255,255,255,0.4) 45%, rgba(255,255,255,0.0) 70%);
+    background: #ffffff;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 220ms ease-out;
-    mix-blend-mode: screen;
+    transition: opacity 300ms ease-in-out;
     z-index: 20;
 }
-.flash.show { opacity: 1; }
+.flash[aria-hidden="false"] { 
+    opacity: 1; 
+}
+.flash[aria-hidden="true"] { 
+    opacity: 0; 
+}
 
 /* Section overlays */
 .section {

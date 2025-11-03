@@ -7,10 +7,13 @@ import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
 import { state, mutations } from './State.js';
 
 export class PlayerController {
-    constructor(camera) {
+    constructor(camera, sceneManager = null) {
         this.camera = camera;
         this.groundRay = new THREE.Raycaster();
+        this.portalRay = new THREE.Raycaster(); // Raycaster para detectar portales
         this.lastCamPos = camera.position.clone();
+        this.sceneManager = sceneManager;
+        this.isTransitioning = false; // Flag para bloquear movimiento durante transiciones
     }
 
     /**
@@ -21,19 +24,25 @@ export class PlayerController {
         this.updatePhysics(delta);
         this.updateCamera();
         this.checkPortalProximity();
+        this.checkPortalTraversal(); // Nueva función para detectar atravesar portales
         
         this.lastCamPos.copy(this.camera.position);
     }
 
     updateMovement(delta) {
+        // No permitir movimiento durante transiciones
+        if (this.isTransitioning) {
+            return;
+        }
+        
         const keys = state.input.keys;
         const speed = keys.shift ? state.player.baseSpeed * 1.8 : state.player.baseSpeed;
         
         // Calcular dirección de movimiento basada en yaw
         const forward = new THREE.Vector3(
-            Math.sin(state.camera.yaw),
+            -Math.sin(state.camera.yaw),
             0,
-            Math.cos(state.camera.yaw)
+            -Math.cos(state.camera.yaw)
         ).normalize();
         
         const right = new THREE.Vector3().crossVectors(
@@ -56,23 +65,36 @@ export class PlayerController {
     }
 
     updatePhysics(delta) {
+        // No aplicar física durante transiciones
+        if (this.isTransitioning) {
+            return;
+        }
+        
         // Gravedad
         if (!state.player.onGround) {
             state.player.velY -= state.player.gravity * delta;
         }
 
-        // Salto
-        if (state.input.jumpQueued && state.player.onGround) {
+        // Salto sin restricciones - puedes saltar incluso en el aire
+        if (state.input.jumpQueued) {
             state.player.velY = state.player.jumpSpeed;
             state.player.onGround = false;
-            mutations.consumeJump();
         }
+        
+        // Consumir el salto SIEMPRE (haya saltado o no)
+        mutations.consumeJump();
 
         // Aplicar velocidad vertical
         this.camera.position.y += state.player.velY * delta;
 
         // Detección de suelo
         this.checkGround();
+        
+        // Resetear si el jugador cae demasiado bajo
+        if (this.camera.position.y < -50) {
+            this.initPosition(0, 5, 0);
+            console.log('Jugador reseteado al centro por caída');
+        }
     }
 
     checkGround() {
@@ -157,6 +179,100 @@ export class PlayerController {
     }
 
     /**
+     * Detecta si el jugador está colisionando frontalmente con un portal
+     */
+    checkPortalTraversal() {
+        if (!this.sceneManager || this.isTransitioning) return;
+
+        const playerPos = this.camera.position.clone();
+        
+        // Dirección hacia donde mira el jugador
+        const forward = new THREE.Vector3(
+            -Math.sin(state.camera.yaw),
+            0,
+            -Math.cos(state.camera.yaw)
+        ).normalize();
+
+        // Configurar raycaster desde la posición del jugador hacia adelante
+        this.portalRay.set(playerPos, forward);
+        this.portalRay.far = 2.5; // Detectar portales a máximo 2.5 unidades
+
+        // Obtener todos los meshes de los portales
+        const portalMeshes = [];
+        for (const portal of state.scene.portals) {
+            // Buscar meshes dentro del grupo del portal
+            portal.group.traverse((child) => {
+                if (child.isMesh) {
+                    child.userData.portal = portal; // Guardar referencia al portal
+                    portalMeshes.push(child);
+                }
+            });
+        }
+
+        // Detectar intersecciones
+        const intersects = this.portalRay.intersectObjects(portalMeshes, false);
+        
+        if (intersects.length > 0) {
+            const hitPortal = intersects[0].object.userData.portal;
+            
+            if (hitPortal) {
+                // Activar transición inmediatamente
+                if (hitPortal.isExitPortal) {
+                    this.transitionToScene('main', 0, 5, 0);
+                } else if (hitPortal.name.toLowerCase() === 'juego') {
+                    this.transitionToScene('game', 0, 5, 0);
+                }
+            }
+        }
+    }
+
+    /**
+     * Realiza la transición a otra escena con efecto visual
+     */
+    async transitionToScene(sceneName, x, y, z) {
+        // Bloquear movimiento del jugador INMEDIATAMENTE
+        this.isTransitioning = true;
+        
+        // Congelar velocidad vertical para que no siga cayendo/subiendo
+        state.player.velY = 0;
+        
+        // Mostrar pantalla blanca INMEDIATAMENTE
+        const flashEl = document.getElementById('flash');
+        if (flashEl) {
+            flashEl.setAttribute('aria-hidden', 'false');
+        }
+
+        // Esperar un momento para el efecto de flash
+        await new Promise(resolve => setTimeout(resolve, 400));
+
+        // Cambiar de escena
+        await this.sceneManager.loadScene(sceneName);
+        
+        // Reposicionar al jugador en la nueva escena
+        this.initPosition(x, y, z);
+        
+        // Resetear física
+        state.player.velY = 0;
+        state.player.onGround = false;
+
+        // Mantener pantalla blanca un poco más
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Ocultar flash gradualmente
+        if (flashEl) {
+            flashEl.setAttribute('aria-hidden', 'true');
+        }
+
+        // Esperar antes de permitir movimiento nuevamente
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Desbloquear movimiento
+        this.isTransitioning = false;
+
+        console.log(`Transitioned to scene: ${sceneName}`);
+    }
+
+    /**
      * Intenta entrar al portal más cercano
      */
     tryEnterPortal() {
@@ -181,6 +297,7 @@ export class PlayerController {
             const overlay = document.getElementById(`section-${sectionId}`);
             if (overlay) {
                 overlay.setAttribute('aria-hidden', 'false');
+                overlay.classList.add('visible');
                 mutations.setActiveSection(portal.name);
                 
                 // Desbloquear pointer si estaba bloqueado

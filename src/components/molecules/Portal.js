@@ -6,8 +6,12 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/loaders/GLTFLoader.js';
 import { state, mutations } from '../../core/State.js';
+import { createTextSprite } from '../atoms/Primitives.js';
 
 const gltfLoader = new GLTFLoader();
+
+// Caché global de modelos GLTF para evitar recargas
+const modelCache = new Map();
 
 // Modelo por defecto si no se especifica uno
 const DEFAULT_MODEL = {
@@ -29,9 +33,12 @@ export class Portal {
         this.plane = null;
         this.beacon = null;
         this.model = null;
+        this.label = null;
+        this.isModelLoaded = false;
         
         this.build();
-        this.loadModel();
+        // NO cargar el modelo automáticamente
+        // this.loadModel();
     }
 
     build() {
@@ -67,29 +74,123 @@ export class Portal {
         this.beacon = new THREE.PointLight(this.color, 0.8, 12);
         this.beacon.position.z = 1.5;
         this.group.add(this.beacon);
+        
+        // Etiqueta de texto flotante sobre el portal
+        this.label = createTextSprite(this.name);
+        this.label.position.set(0, 3.0, 0);
+        this.group.add(this.label);
     }
 
     loadModel() {
+        if (this.isModelLoaded) {
+            console.log(`Portal ${this.name}: Model already loaded`);
+            return Promise.resolve();
+        }
+
         const config = this.modelConfig;
         const primaryUrl = config.url || config.modelUrl;
         const fallbackUrl = config.fallbackUrl;
 
         if (!primaryUrl) {
             console.warn(`Portal ${this.name}: No model URL provided, using default`);
-            this.loadGLTF(DEFAULT_MODEL.url, DEFAULT_MODEL);
-            return;
+            return this.loadGLTF(DEFAULT_MODEL.url, DEFAULT_MODEL);
         }
 
-        this.loadGLTF(primaryUrl, config, fallbackUrl);
+        return this.loadGLTF(primaryUrl, config, fallbackUrl);
     }
 
     loadGLTF(url, config, fallbackUrl = null) {
-        gltfLoader.load(
-            url,
-            (gltf) => this.onModelLoaded(gltf, config),
-            undefined,
-            (error) => this.onModelError(url, error, fallbackUrl, config)
-        );
+        // Check cache first
+        if (modelCache.has(url)) {
+            console.log(`Portal ${this.name}: Loading model from cache (${url})`);
+            const cachedGltf = modelCache.get(url);
+            
+            // Crear un objeto gltf fake con el modelo clonado
+            const clonedGltf = {
+                scene: this.cloneGltfScene(cachedGltf.scene),
+                animations: cachedGltf.animations
+            };
+            
+            // Usar el mismo método que para red, ya que los materiales están clonados
+            this.onModelLoaded(clonedGltf, config);
+            return Promise.resolve();
+        }
+
+        console.log(`Portal ${this.name}: Loading model from network (${url})`);
+        
+        return new Promise((resolve, reject) => {
+            gltfLoader.load(
+                url,
+                (gltf) => {
+                    const originalScene = gltf.scene || (gltf.scenes && gltf.scenes[0]);
+                    
+                    // Store the ORIGINAL unmodified model in cache
+                    modelCache.set(url, {
+                        scene: originalScene,
+                        animations: gltf.animations
+                    });
+                    
+                    // Clone it for this portal instance
+                    const clonedGltf = {
+                        scene: this.cloneGltfScene(originalScene),
+                        animations: gltf.animations
+                    };
+                    
+                    // Process only the clone, not the cached original
+                    this.onModelLoaded(clonedGltf, config);
+                    resolve();
+                },
+                undefined,
+                (error) => {
+                    this.onModelError(url, error, fallbackUrl, config);
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    /**
+     * Clona correctamente un modelo GLTF con materiales independientes
+     */
+    cloneGltfScene(source) {
+        const cloned = source.clone(true);
+        
+        // Clonar materiales profundamente para que cada portal tenga su propia copia
+        cloned.traverse((node) => {
+            if (node.isMesh && node.material) {
+                if (Array.isArray(node.material)) {
+                    node.material = node.material.map(mat => this.deepCloneMaterial(mat));
+                } else {
+                    node.material = this.deepCloneMaterial(node.material);
+                }
+            }
+        });
+        
+        return cloned;
+    }
+
+    /**
+     * Clona un material profundamente preservando todas las propiedades
+     */
+    deepCloneMaterial(material) {
+        const cloned = material.clone();
+        
+        // Preservar propiedades emisivas originales
+        if (material.emissive) {
+            cloned.emissive = material.emissive.clone();
+            cloned.emissiveIntensity = material.emissiveIntensity;
+        }
+        
+        // Preservar otras propiedades importantes
+        if (material.color) cloned.color = material.color.clone();
+        if (material.map) cloned.map = material.map;
+        if (material.emissiveMap) cloned.emissiveMap = material.emissiveMap;
+        
+        cloned.opacity = material.opacity;
+        cloned.transparent = material.transparent;
+        cloned.side = material.side;
+        
+        return cloned;
     }
 
     onModelLoaded(gltf, config) {
@@ -136,6 +237,7 @@ export class Portal {
 
             this.group.add(model);
             this.model = model;
+            this.isModelLoaded = true;
 
             // Añadir luces locales si se solicita
             if (config.addFillLights) {

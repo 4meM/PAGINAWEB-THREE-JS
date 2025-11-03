@@ -1,6 +1,7 @@
 /**
- * ORGANISM: SpaceStation
- * Construye la estación espacial completa usando moléculas
+ * ORGANISM: GameStation
+ * Estación que aparece en la escena de juego con los módulos: Jugabilidad, Progreso, Equipo
+ * Incluye un portal de salida para volver a la escena principal
  */
 
 import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
@@ -10,9 +11,9 @@ import { Catwalk } from '../molecules/Catwalk.js';
 import { StationPad } from '../molecules/StationPad.js';
 import { createStrut } from '../atoms/Primitives.js';
 import { mutations } from '../../core/State.js';
-import { MODULE_DEFINITIONS, HUB_CONFIG, STATION_CONFIG } from '../../config/moduleConfig.js';
+import { GAME_MODULE_DEFINITIONS, GAME_HUB_CONFIG, GAME_STATION_CONFIG } from '../../config/gameModulesConfig.js';
 
-export class SpaceStation {
+export class GameStation {
     constructor() {
         this.group = new THREE.Group();
         this.hub = null;
@@ -20,23 +21,23 @@ export class SpaceStation {
         this.catwalks = [];
         this.pads = [];
         this.struts = [];
+        this.exitPortal = null;
         
-        // Usar configuración externa
-        this.moduleDefinitions = MODULE_DEFINITIONS;
-        this.config = STATION_CONFIG;
+        this.moduleDefinitions = GAME_MODULE_DEFINITIONS;
+        this.config = GAME_STATION_CONFIG;
     }
 
     build() {
-        // Hub central (desde configuración)
+        // Hub central
         const hubPos = new THREE.Vector3(
-            HUB_CONFIG.position.x,
-            HUB_CONFIG.position.y,
-            HUB_CONFIG.position.z
+            GAME_HUB_CONFIG.position.x,
+            GAME_HUB_CONFIG.position.y,
+            GAME_HUB_CONFIG.position.z
         );
-        this.hub = new StationHub(HUB_CONFIG.name, hubPos, HUB_CONFIG.color);
+        this.hub = new StationHub(GAME_HUB_CONFIG.name, hubPos, GAME_HUB_CONFIG.color);
         this.group.add(this.hub.getGroup());
 
-        const R = this.config.portalRadius; // Radio de los portales
+        const R = this.config.portalRadius;
         const angles = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
 
         // Construir cada módulo con su portal
@@ -52,7 +53,7 @@ export class SpaceStation {
             const portalPos = pos.clone().add(facing.clone().multiplyScalar(4.2));
             
             const portal = new Portal(def.name, portalPos, facing, def.color, def.model);
-            portal.group.position.y = 1.6; // Altura del ojo del jugador
+            portal.group.position.y = 1.6;
             this.portals.push(portal);
             this.group.add(portal.getGroup());
             mutations.addPortal(portal);
@@ -61,12 +62,12 @@ export class SpaceStation {
             const strut = createStrut(
                 new THREE.Vector3(0, 0, 0),
                 pos,
-                0x3bd3ff
+                this.config.strutColor
             );
             this.struts.push(strut);
             this.group.add(strut);
 
-            // Catwalk desde el hub al portal (usando config)
+            // Catwalk desde el hub al portal
             const from = new THREE.Vector3(
                 Math.cos(ang) * 6.8,
                 0.63,
@@ -78,20 +79,75 @@ export class SpaceStation {
             this.catwalks.push(catwalk);
             this.group.add(catwalk.getGroup());
 
-            // Extensión de seguridad más allá del portal
+            // Extensión de seguridad
             const beyond = to.clone().add(facing.clone().multiplyScalar(2.2));
             const extCatwalk = new Catwalk(to, beyond, this.config.catwalkColor, 0.08);
             this.catwalks.push(extCatwalk);
             this.group.add(extCatwalk.getGroup());
 
-            // Plataformas de salto a lo largo del camino
+            // Plataformas de salto
             this.createJumpingPads(from, to, ang);
 
-            // Plataforma de aterrizaje grande cerca del portal
+            // Plataforma de aterrizaje
             this.createLandingPad(to, facing);
         }
 
-        console.log('✓ SpaceStation built successfully');
+        // PORTAL DE SALIDA (180 grados desde el primer portal)
+        const exitAngle = Math.PI;
+        const exitPos = new THREE.Vector3(Math.cos(exitAngle) * R, 0, Math.sin(exitAngle) * R);
+        const exitFacing = new THREE.Vector3()
+            .subVectors(new THREE.Vector3(0, 0, 0), exitPos)
+            .normalize();
+        const exitPortalPos = exitPos.clone().add(exitFacing.clone().multiplyScalar(4.2));
+        
+        this.exitPortal = new Portal(
+            'Salir',
+            exitPortalPos,
+            exitFacing,
+            0xffaa00, // Color naranja
+            {
+                url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb',
+                scale: 2.0,
+                center: true,
+                yaw: 0,
+                yOffset: 1.0
+            }
+        );
+        this.exitPortal.group.position.y = 1.6;
+        this.exitPortal.isExitPortal = true; // Marcar como portal de salida
+        this.portals.push(this.exitPortal);
+        this.group.add(this.exitPortal.getGroup());
+        mutations.addPortal(this.exitPortal);
+
+        // Strut y catwalk para el portal de salida
+        const exitStrut = createStrut(
+            new THREE.Vector3(0, 0, 0),
+            exitPos,
+            0xffaa00
+        );
+        this.struts.push(exitStrut);
+        this.group.add(exitStrut);
+
+        const exitFrom = new THREE.Vector3(
+            Math.cos(exitAngle) * 6.8,
+            0.63,
+            Math.sin(exitAngle) * 6.8
+        );
+        const exitTo = exitPortalPos.clone();
+        
+        const exitCatwalk = new Catwalk(exitFrom, exitTo, 0xffaa00);
+        this.catwalks.push(exitCatwalk);
+        this.group.add(exitCatwalk.getGroup());
+
+        const exitBeyond = exitTo.clone().add(exitFacing.clone().multiplyScalar(2.2));
+        const exitExtCatwalk = new Catwalk(exitTo, exitBeyond, 0xffaa00, 0.08);
+        this.catwalks.push(exitExtCatwalk);
+        this.group.add(exitExtCatwalk.getGroup());
+
+        this.createJumpingPads(exitFrom, exitTo, exitAngle);
+        this.createLandingPad(exitTo, exitFacing);
+
+        console.log('✓ GameStation built successfully');
     }
 
     createJumpingPads(from, to, angle) {
@@ -120,7 +176,7 @@ export class SpaceStation {
             const pos = fromFlat.clone().lerp(toFlat, s);
             pos.y = padCenterY;
             
-            const pad = new StationPad(pos, padSize, 0x6cf9ff, {
+            const pad = new StationPad(pos, padSize, this.config.catwalkColor, {
                 quaternion: pathQuat,
                 centerY: padCenterY
             });
@@ -149,7 +205,7 @@ export class SpaceStation {
             pathDir
         );
 
-        const pad = new StationPad(landCenter, landSize, 0x6cf9ff, {
+        const pad = new StationPad(landCenter, landSize, this.config.catwalkColor, {
             quaternion: pathQuat
         });
         this.pads.push(pad);
@@ -157,7 +213,6 @@ export class SpaceStation {
     }
 
     update(elapsed) {
-        // Actualizar portales (animaciones, etc.)
         this.portals.forEach(portal => portal.update(elapsed));
     }
 
@@ -173,12 +228,16 @@ export class SpaceStation {
         return this.portals;
     }
 
+    getExitPortal() {
+        return this.exitPortal;
+    }
+
     /**
      * Carga explícitamente los modelos de todos los portales
-     * Se llama cuando la escena principal se carga por primera vez
+     * Se llama cuando la escena se activa por primera vez
      */
     async loadPortalModels() {
-        console.log('SpaceStation: Loading portal models...');
+        console.log('GameStation: Loading portal models...');
         const loadPromises = this.portals.map(portal => {
             if (portal.modelConfig && (portal.modelConfig.url || portal.modelConfig.modelUrl)) {
                 return portal.loadModel();
@@ -187,6 +246,6 @@ export class SpaceStation {
         });
         
         await Promise.all(loadPromises);
-        console.log('✓ SpaceStation: All portal models loaded');
+        console.log('✓ GameStation: All portal models loaded');
     }
 }

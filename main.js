@@ -25,13 +25,13 @@ class App {
         this.engine = new Engine();
         this.engine.init();
 
+        this.sceneManager = new SceneManager(this.engine);
+
         this.inputManager = new InputManager(this.engine.getRenderer());
-        this.playerController = new PlayerController(this.engine.getCamera());
+        this.playerController = new PlayerController(this.engine.getCamera(), this.sceneManager);
 
         this.uiManager = new UIManager();
         this.uiManager.init();
-
-        this.sceneManager = new SceneManager(this.engine);
 
         const sceneData = await this.sceneManager.loadScene('main');
 

@@ -17,11 +17,12 @@ export const MODULE_DEFINITIONS = [
             center: true,
             yaw: (Math.PI / 2) + Math.PI,
             yOffset: 0.25,
+            yaw: 0.4,
             preserveMaterials: true,
             addFillLights: true,
             fillLightIntensity: 20.0,
             fillLightDistance: 30.0,
-            offset: { x: 8.0, y: 0, z: 0 }
+            offset: { x: 4.0, y: 0, z: -8 }
         }
     },
     {
@@ -34,7 +35,12 @@ export const MODULE_DEFINITIONS = [
             scale: 10.0,
             center: true,
             yaw: 0.2,
-            yOffset: 0.4
+            yOffset: 0.4,
+            offset: {
+                x:0,
+                y:0,
+                z: -6
+            }
         }
     },
     {

@@ -39,6 +39,9 @@ export class MainScene {
         this.station.build();
         this.spaceRoot.add(this.station.getGroup());
 
+        // Cargar modelos de los portales explícitamente
+        await this.station.loadPortalModels();
+
         console.log('✓ MainScene loaded');
         
         return {
@@ -50,20 +53,20 @@ export class MainScene {
     setupLights() {
         // Luz hemisférica para ambiente general
         const hemi = new THREE.HemisphereLight(0x4ac6ff, 0x0a0a12, 0.8);
-        this.scene.add(hemi);
+        this.spaceRoot.add(hemi);
         this.lights.push(hemi);
 
         // Luz direccional principal
         const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
         keyLight.position.set(5, 10, 8);
         keyLight.castShadow = false;
-        this.scene.add(keyLight);
+        this.spaceRoot.add(keyLight);
         this.lights.push(keyLight);
 
         // Luz de realce (rim light)
         const rimLight = new THREE.PointLight(0x00eaff, 1.2, 50);
         rimLight.position.set(-6, 4, 6);
-        this.scene.add(rimLight);
+        this.spaceRoot.add(rimLight);
         this.lights.push(rimLight);
     }
 
@@ -89,9 +92,25 @@ export class MainScene {
     }
 
     unload() {
-        // Limpiar recursos cuando se cambie de escena
-        this.scene.remove(this.spaceRoot);
+        // Solo ocultar en lugar de eliminar (para el caché)
+        if (this.spaceRoot) {
+            this.spaceRoot.visible = false;
+        }
         console.log('MainScene unloaded');
+    }
+
+    /**
+     * Reactiva la escena cuando se vuelve a cargar desde el caché
+     */
+    async activate() {
+        if (this.spaceRoot) {
+            this.spaceRoot.visible = true;
+        }
+        
+        // Los modelos y luces ya están en spaceRoot, se muestran automáticamente
+        if (this.station) {
+            await this.station.loadPortalModels();
+        }
     }
 
     getStation() {

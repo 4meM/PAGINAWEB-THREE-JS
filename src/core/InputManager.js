@@ -129,6 +129,7 @@ export class InputManager {
             const overlay = document.getElementById(`section-${sectionId}`);
             if (overlay) {
                 overlay.setAttribute('aria-hidden', 'true');
+                overlay.classList.remove('visible');
                 mutations.setActiveSection(null);
             }
         }

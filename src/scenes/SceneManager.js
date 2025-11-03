@@ -5,19 +5,20 @@
  */
 
 import { MainScene } from './MainScene.js';
+import { GameScene } from './GameScene.js';
 import { state } from '../core/State.js';
 
 export class SceneManager {
     constructor(engine) {
         this.engine = engine;
         this.currentScene = null;
+        this.currentSceneName = null;
         this.scenes = new Map();
+        this.sceneInstances = new Map(); // Instancias de escenas para reutilizar
         
         // Registrar escenas disponibles
         this.registerScene('main', MainScene);
-        // En el futuro, puedes añadir más escenas aquí:
-        // this.registerScene('interior', InteriorScene);
-        // this.registerScene('game', GameScene);
+        this.registerScene('game', GameScene);
     }
 
     registerScene(name, SceneClass) {
@@ -27,27 +28,69 @@ export class SceneManager {
     async loadScene(sceneName, ...args) {
         console.log(`SceneManager: Loading scene "${sceneName}"`);
 
-        // Descargar escena actual si existe
+        // Si ya estamos en esta escena, no hacer nada
+        if (this.currentSceneName === sceneName && this.currentScene) {
+            console.log(`Already in scene "${sceneName}"`);
+            return this.getSceneData();
+        }
+
+        // Ocultar escena actual si existe
         if (this.currentScene) {
             this.currentScene.unload();
         }
 
-        // Verificar que la escena existe
-        const SceneClass = this.scenes.get(sceneName);
-        if (!SceneClass) {
-            throw new Error(`Scene "${sceneName}" not found`);
+        // Verificar si ya existe una instancia de esta escena
+        let sceneInstance = this.sceneInstances.get(sceneName);
+        
+        if (sceneInstance) {
+            // Reutilizar instancia existente
+            console.log(`Reusing existing instance of scene "${sceneName}"`);
+            this.currentScene = sceneInstance;
+            
+            // Reactivar la escena
+            if (sceneInstance.activate) {
+                await sceneInstance.activate();
+            }
+        } else {
+            // Crear nueva instancia solo si no existe
+            const SceneClass = this.scenes.get(sceneName);
+            if (!SceneClass) {
+                throw new Error(`Scene "${sceneName}" not found`);
+            }
+
+            console.log(`Creating new instance of scene "${sceneName}"`);
+            sceneInstance = new SceneClass(this.engine, ...args);
+            await sceneInstance.load();
+            
+            // Guardar instancia para reutilizar después
+            this.sceneInstances.set(sceneName, sceneInstance);
+            this.currentScene = sceneInstance;
         }
 
-        // Crear e inicializar la nueva escena
-        this.currentScene = new SceneClass(this.engine, ...args);
-        const sceneData = await this.currentScene.load();
-
         // Actualizar el estado global
+        this.currentSceneName = sceneName;
         state.scene.currentScene = sceneName;
 
         console.log(`✓ Scene "${sceneName}" loaded successfully`);
         
-        return sceneData;
+        return this.getSceneData();
+    }
+
+    getSceneData() {
+        if (!this.currentScene) {
+            return { hubInfo: null, portals: [] };
+        }
+
+        return {
+            hubInfo: this.currentScene.getStationInfo?.() || 
+                     this.currentScene.station?.getHubInfo?.() || 
+                     this.currentScene.spaceStation?.getHubInfo?.() ||
+                     null,
+            portals: this.currentScene.gameStation?.getPortals?.() || 
+                     this.currentScene.station?.getPortals?.() ||
+                     this.currentScene.spaceStation?.getPortals?.() || 
+                     []
+        };
     }
 
     update(delta, elapsed) {
