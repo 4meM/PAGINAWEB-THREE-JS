@@ -179,6 +179,12 @@ export class SpaceStation {
      */
     async loadPortalModels() {
         console.log('SpaceStation: Loading portal models...');
+        
+        // BUG FIX: Re-agregar portales al estado global cuando se reactiva la escena
+        this.portals.forEach(portal => {
+            mutations.addPortal(portal);
+        });
+        
         const loadPromises = this.portals.map(portal => {
             if (portal.modelConfig && (portal.modelConfig.url || portal.modelConfig.modelUrl)) {
                 return portal.loadModel();

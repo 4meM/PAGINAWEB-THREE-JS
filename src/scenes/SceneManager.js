@@ -38,6 +38,10 @@ export class SceneManager {
         if (this.currentScene) {
             this.currentScene.unload();
         }
+        
+        // BUG FIX: Limpiar portales ANTES de cargar la nueva escena
+        // Esto previene que los portales de la escena anterior persistan
+        state.scene.portals = [];
 
         // Verificar si ya existe una instancia de esta escena
         let sceneInstance = this.sceneInstances.get(sceneName);

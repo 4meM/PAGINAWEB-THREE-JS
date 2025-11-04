@@ -45,10 +45,6 @@ export class InputManager {
         if (k === 'escape') {
             this.closeActiveSection();
         }
-
-        if (k === 'enter') {
-            this.tryEnterPortal();
-        }
     }
 
     onKeyUp(e) {
@@ -126,6 +122,16 @@ export class InputManager {
     closeActiveSection() {
         if (state.ui.activeSection) {
             const sectionId = state.ui.activeSection.toLowerCase();
+            const gameModules = ['jugabilidad', 'progreso', 'comunidad'];
+            
+            // Si es un módulo de juego, usar el método específico de UIManager
+            if (gameModules.includes(sectionId)) {
+                const event = new CustomEvent('closeGameModule');
+                window.dispatchEvent(event);
+                return;
+            }
+            
+            // Para secciones normales
             const overlay = document.getElementById(`section-${sectionId}`);
             if (overlay) {
                 overlay.setAttribute('aria-hidden', 'true');
@@ -133,11 +139,5 @@ export class InputManager {
                 mutations.setActiveSection(null);
             }
         }
-    }
-
-    tryEnterPortal() {
-        // Esta lógica será implementada por el PlayerController
-        // que tiene acceso a la posición del jugador y los portales
-        console.log('Enter portal logic will be handled by PlayerController');
     }
 }

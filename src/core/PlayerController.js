@@ -156,26 +156,18 @@ export class PlayerController {
 
         if (closestPortal && closestPortal !== state.ui.hoveredPortal) {
             state.ui.hoveredPortal = closestPortal;
-            this.showPortalPrompt(closestPortal.name);
+            // No mostrar prompt, solo marcar el portal cercano
         } else if (!closestPortal && state.ui.hoveredPortal) {
             state.ui.hoveredPortal = null;
-            this.hidePortalPrompt();
         }
     }
 
     showPortalPrompt(portalName) {
-        const promptEl = document.getElementById('prompt');
-        if (promptEl) {
-            promptEl.textContent = `Presiona Enter para entrar a ${portalName}`;
-            promptEl.setAttribute('aria-hidden', 'false');
-        }
+        // Ya no se usa, pero se mantiene por compatibilidad
     }
 
     hidePortalPrompt() {
-        const promptEl = document.getElementById('prompt');
-        if (promptEl) {
-            promptEl.setAttribute('aria-hidden', 'true');
-        }
+        // Ya no se usa, pero se mantiene por compatibilidad
     }
 
     /**
@@ -195,7 +187,7 @@ export class PlayerController {
 
         // Configurar raycaster desde la posición del jugador hacia adelante
         this.portalRay.set(playerPos, forward);
-        this.portalRay.far = 2.5; // Detectar portales a máximo 2.5 unidades
+        this.portalRay.far = 1.8; // Detectar portales a máximo 1.8 unidades (más cerca)
 
         // Obtener todos los meshes de los portales
         const portalMeshes = [];
@@ -216,20 +208,88 @@ export class PlayerController {
             const hitPortal = intersects[0].object.userData.portal;
             
             if (hitPortal) {
-                // Activar transición inmediatamente
-                if (hitPortal.isExitPortal) {
+                const portalName = hitPortal.name.toLowerCase();
+                const gameModules = ['jugabilidad', 'progreso', 'comunidad'];
+                
+                // PRINCIPIO DE FEEDBACK: No permitir nuevas interacciones si hay overlay activo
+                // Esto previene confusión del usuario (Principio de Gestalt: Ley de Prägnanz)
+                const hasActiveOverlay = state.ui.activeSection !== null;
+                
+                // Portal de salida
+                if (hitPortal.isExitPortal && !hasActiveOverlay) {
                     this.transitionToScene('main', 0, 5, 0);
-                } else if (hitPortal.name.toLowerCase() === 'juego') {
+                } 
+                // Portal principal "Juego"
+                else if (portalName === 'juego' && !hasActiveOverlay) {
                     this.transitionToScene('game', 0, 5, 0);
+                }
+                // Portales de módulos de juego (Jugabilidad, Progreso, Comunidad)
+                // SOLO si no hay overlay abierto (Consistencia de interacción)
+                else if (gameModules.includes(portalName) && !hasActiveOverlay) {
+                    this.openGameModuleByTraversal(portalName);
                 }
             }
         }
     }
 
     /**
+     * Abre un módulo de juego cuando el jugador atraviesa su portal
+     */
+    openGameModuleByTraversal(moduleName) {
+        // Solo activar si no está ya en transición
+        if (this.isTransitioning) return;
+        
+        this.isTransitioning = true;
+        
+        console.log(`Opening game module by traversal: ${moduleName}`);
+        
+        // Empujar al jugador hacia atrás para sacarlo del portal (solo 1.5 unidades)
+        const backward = new THREE.Vector3(
+            Math.sin(state.camera.yaw),
+            0,
+            Math.cos(state.camera.yaw)
+        ).normalize().multiplyScalar(1.5); // Empujar solo 1.5 unidades hacia atrás
+        
+        this.camera.position.add(backward);
+        
+        // Transición visual con flash
+        const flashEl = document.getElementById('flash');
+        if (flashEl) {
+            flashEl.setAttribute('aria-hidden', 'false');
+        }
+
+        // Después del flash, abrir el módulo
+        setTimeout(() => {
+            // Ocultar flash
+            if (flashEl) {
+                flashEl.setAttribute('aria-hidden', 'true');
+            }
+            
+            // Emitir evento para que UIManager maneje el módulo
+            const event = new CustomEvent('openGameModule', { 
+                detail: { moduleName } 
+            });
+            window.dispatchEvent(event);
+            
+            // Desbloquear pointer
+            if (state.ui.pointerLocked) {
+                document.exitPointerLock();
+            }
+            
+            // Cooldown largo para evitar re-activaciones
+            // Solo se desbloqueará cuando se cierre el overlay
+            // NO desbloquear automáticamente aquí
+        }, 400);
+    }
+
+    /**
      * Realiza la transición a otra escena con efecto visual
      */
     async transitionToScene(sceneName, x, y, z) {
+        // BUG FIX: Limpiar estado de portal hover ANTES de transicionar
+        // Esto previene que el portal de la escena anterior persista
+        state.ui.hoveredPortal = null;
+        
         // Bloquear movimiento del jugador INMEDIATAMENTE
         this.isTransitioning = true;
         
@@ -263,49 +323,14 @@ export class PlayerController {
             flashEl.setAttribute('aria-hidden', 'true');
         }
 
-        // Esperar antes de permitir movimiento nuevamente
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // BUG FIX: Cooldown MÁS LARGO después de transición de escena
+        // Esto previene que se detecten portales inmediatamente al aparecer
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Desbloquear movimiento
         this.isTransitioning = false;
 
         console.log(`Transitioned to scene: ${sceneName}`);
-    }
-
-    /**
-     * Intenta entrar al portal más cercano
-     */
-    tryEnterPortal() {
-        if (state.ui.hoveredPortal) {
-            this.enterPortal(state.ui.hoveredPortal);
-        }
-    }
-
-    enterPortal(portal) {
-        // Transición visual
-        const flashEl = document.getElementById('flash');
-        if (flashEl) {
-            flashEl.setAttribute('aria-hidden', 'false');
-            setTimeout(() => {
-                flashEl.setAttribute('aria-hidden', 'true');
-            }, 650);
-        }
-
-        // Abrir la sección correspondiente
-        setTimeout(() => {
-            const sectionId = portal.name.toLowerCase();
-            const overlay = document.getElementById(`section-${sectionId}`);
-            if (overlay) {
-                overlay.setAttribute('aria-hidden', 'false');
-                overlay.classList.add('visible');
-                mutations.setActiveSection(portal.name);
-                
-                // Desbloquear pointer si estaba bloqueado
-                if (state.ui.pointerLocked) {
-                    document.exitPointerLock();
-                }
-            }
-        }, 325);
     }
 
     /**

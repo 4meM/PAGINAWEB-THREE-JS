@@ -31,9 +31,9 @@ export const GAME_MODULE_DEFINITIONS = [
         }
     },
     {
-        name: 'Equipo',
+        name: 'Comunidad',
         color: 0x3366ff,
-        description: 'Miembros del equipo de desarrollo',
+        description: 'Equipo de desarrollo y comunidad',
         model: {
             url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
             fallbackUrl: null,

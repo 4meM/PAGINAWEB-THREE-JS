@@ -42,11 +42,26 @@ class App {
 
         this.engine.onUpdate((delta, elapsed) => this.update(delta, elapsed));
 
-        this.inputManager.tryEnterPortal = () => {
-            this.playerController.tryEnterPortal();
-        };
+        // Escuchar evento de apertura de módulo de juego
+        window.addEventListener('openGameModule', (e) => {
+            this.uiManager.openGameModule(e.detail.moduleName);
+        });
 
-        console.log(' Application initialized!');
+        // Escuchar evento de cierre de módulo de juego
+        window.addEventListener('closeGameModule', () => {
+            this.uiManager.closeGameModule();
+        });
+
+        // Desbloquear PlayerController cuando se cierra un módulo
+        window.addEventListener('gameModuleClosed', () => {
+            // Esperar un momento antes de permitir nuevas transiciones
+            // Esto evita que se reactive inmediatamente al cerrar
+            setTimeout(() => {
+                this.playerController.isTransitioning = false;
+            }, 500);
+        });
+
+        console.log('✓ Application initialized!');
         this.engine.start();
     }
 
