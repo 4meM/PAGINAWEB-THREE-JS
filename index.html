@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
     <!-- UI Overlay (no interfiere con interacciones 3D) -->
@@ -33,6 +33,7 @@
                     <button data-close>Cerrar</button>
                 </div>
             </div>
+            
             <div id="section-juego" class="section" aria-hidden="true">
                 <div class="section__card">
                     <h2>Juego · Proyecto en desarrollo</h2>
@@ -50,17 +51,33 @@
             </div>
             <div id="section-proyecto" class="section" aria-hidden="true">
                 <div class="section__card">
-                    <h2>Proyecto IHC · Innovación</h2>
+                    <h2>📁 Proyecto IHC · Entrevistas</h2>
                     <p>
-                        Propuesta: “Portales accesibles” — micro-interacciones que reducen el error humano 
-                        al entrar/salir de espacios virtuales. Combina detección por cruce de plano + proximidad,
-                        realinea altura al instante y ofrece pistas visuales sutiles.
+                        En este proyecto hemos realizado entrevistas a usuarios para validar 
+                        nuestras hipótesis de diseño y mejorar la experiencia de usuario.
                     </p>
                     <p>
-                        Beneficio en IHC: mejora la percepción de control, minimiza caídas accidentales y 
-                        mantiene el flujo atencional. Se puede extrapolar a recorridos museográficos, training 
-                        industrial y visualización de datos inmersiva.
+                        Haz clic en el botón de abajo para acceder a la carpeta de Google Drive 
+                        con todas las entrevistas documentadas, transcripciones y análisis.
                     </p>
+                    
+                    <!-- Botón destacado para ver entrevistas -->
+                    <div class="button-container">
+                        <a 
+                            id="btn-ver-entrevistas" 
+                            href="https://drive.google.com/drive/folders/1_LFFICgvsbnnlKofel0j_WU-_8_XxmJN" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            class="button button--primary"
+                        >
+                            🎥 Ver Entrevistas en Drive
+                        </a>
+                    </div>
+                    
+                    <p class="text-muted">
+                        💡 Se abrirá en una nueva pestaña
+                    </p>
+                    
                     <button data-close>Cerrar</button>
                 </div>
             </div>
@@ -86,6 +103,6 @@
 
     <div id="prompt" class="prompt" aria-live="polite" aria-hidden="true">Presiona Enter para entrar</div>
     <div class="vignette" aria-hidden="true"></div>
-    <script type="module" src="main.js?v=2"></script>
+    <script type="module" src="main.js?v=3"></script>
 </body>
 </html>

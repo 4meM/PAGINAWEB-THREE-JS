@@ -210,6 +210,7 @@ export class PlayerController {
             if (hitPortal) {
                 const portalName = hitPortal.name.toLowerCase();
                 const gameModules = ['jugabilidad', 'progreso', 'comunidad'];
+                const mainSections = ['inicio', 'proyecto']; // Secciones principales con overlays simples
                 
                 // PRINCIPIO DE FEEDBACK: No permitir nuevas interacciones si hay overlay activo
                 // Esto previene confusión del usuario (Principio de Gestalt: Ley de Prägnanz)
@@ -223,6 +224,10 @@ export class PlayerController {
                 else if (portalName === 'juego' && !hasActiveOverlay) {
                     this.transitionToScene('game', 0, 5, 0);
                 }
+                // Portales de secciones principales (Inicio, Proyecto)
+                else if (mainSections.includes(portalName) && !hasActiveOverlay) {
+                    this.openMainSectionByTraversal(portalName);
+                }
                 // Portales de módulos de juego (Jugabilidad, Progreso, Comunidad)
                 // SOLO si no hay overlay abierto (Consistencia de interacción)
                 else if (gameModules.includes(portalName) && !hasActiveOverlay) {
@@ -230,6 +235,60 @@ export class PlayerController {
                 }
             }
         }
+    }
+
+    /**
+     * Abre una sección principal cuando el jugador atraviesa su portal (Inicio, Proyecto)
+     */
+    openMainSectionByTraversal(sectionName) {
+        // Solo activar si no está ya en transición
+        if (this.isTransitioning) return;
+        
+        this.isTransitioning = true;
+        
+        console.log(`Opening main section by traversal: ${sectionName}`);
+        
+        // Empujar al jugador hacia atrás para sacarlo del portal
+        const backward = new THREE.Vector3(
+            Math.sin(state.camera.yaw),
+            0,
+            Math.cos(state.camera.yaw)
+        ).normalize().multiplyScalar(1.5);
+        
+        this.camera.position.add(backward);
+        
+        // Transición visual con flash
+        const flashEl = document.getElementById('flash');
+        if (flashEl) {
+            flashEl.setAttribute('aria-hidden', 'false');
+        }
+
+        // Después del flash, abrir la sección
+        setTimeout(() => {
+            // Ocultar flash
+            if (flashEl) {
+                flashEl.setAttribute('aria-hidden', 'true');
+            }
+            
+            // Abrir el overlay de la sección usando UIManager
+            mutations.setActiveSection(sectionName);
+            
+            // Desbloquear pointer
+            if (state.ui.pointerLocked) {
+                document.exitPointerLock();
+            }
+            
+            // Mostrar el overlay
+            const sectionEl = document.getElementById(`section-${sectionName}`);
+            if (sectionEl) {
+                sectionEl.setAttribute('aria-hidden', 'false');
+            }
+            
+            // Desbloquear después de un pequeño delay
+            setTimeout(() => {
+                this.isTransitioning = false;
+            }, 500);
+        }, 320);
     }
 
     /**
