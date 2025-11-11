@@ -10,6 +10,8 @@ export class VideoGallery {
         this.videos = videos; // Array de { youtubeId, alt, title }
         this.modal = null;
         this.listeners = [];
+        this.currentIndex = 0;
+        this.videosPerView = 2; // Mostrar 2 videos a la vez
     }
 
     /**
@@ -27,20 +29,34 @@ export class VideoGallery {
     }
 
     /**
-     * Genera HTML de la galería de videos (horizontal con scroll)
+     * Genera HTML de la galería de videos (con navegación por flechas)
      */
     getGalleryHTML() {
         if (this.videos.length === 0) {
             return '<p class="video-gallery__empty">No hay videos disponibles</p>';
         }
 
+        const visibleVideos = this.getVisibleVideos();
+        const hasMore = this.videos.length > this.videosPerView;
+        const canGoBack = this.currentIndex > 0;
+        const canGoForward = this.currentIndex + this.videosPerView < this.videos.length;
+
         return `
             <div class="video-gallery">
-                <div class="video-gallery__scroll-container">
-                    <div class="video-gallery__horizontal">
-                        ${this.videos.map((video, index) => `
-                            <div class="video-gallery__item" data-index="${index}">
+                ${hasMore && canGoBack ? `
+                    <button class="video-gallery__nav video-gallery__nav--prev" aria-label="Anterior">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                ` : ''}
+                
+                <div class="video-gallery__viewport">
+                    <div class="video-gallery__container">
+                        ${visibleVideos.map((video) => `
+                            <div class="video-gallery__item" data-index="${video.originalIndex}">
                                 <div class="video-gallery__thumbnail">
+                                    <div class="video-gallery__number">${video.originalIndex + 1}</div>
                                     <img 
                                         src="${this.getThumbnail(video.youtubeId)}" 
                                         alt="${video.alt || 'Video thumbnail'}"
@@ -54,7 +70,7 @@ export class VideoGallery {
                                         </svg>
                                     </div>
                                     <div class="video-gallery__overlay">
-                                        <span class="video-gallery__label">Video</span>
+                                        <span class="video-gallery__label">Video ${video.originalIndex + 1}</span>
                                     </div>
                                 </div>
                                 ${video.title ? `<p class="video-gallery__title">${video.title}</p>` : ''}
@@ -62,8 +78,56 @@ export class VideoGallery {
                         `).join('')}
                     </div>
                 </div>
+
+                ${hasMore && canGoForward ? `
+                    <button class="video-gallery__nav video-gallery__nav--next" aria-label="Siguiente">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                ` : ''}
+
+                ${hasMore ? `
+                    <div class="video-gallery__indicators">
+                        ${Array.from({ length: Math.ceil(this.videos.length / this.videosPerView) }).map((_, i) => `
+                            <span class="video-gallery__indicator ${i === Math.floor(this.currentIndex / this.videosPerView) ? 'active' : ''}"></span>
+                        `).join('')}
+                    </div>
+                ` : ''}
             </div>
         `;
+    }
+
+    /**
+     * Obtiene los videos visibles según el índice actual
+     */
+    getVisibleVideos() {
+        return this.videos
+            .slice(this.currentIndex, this.currentIndex + this.videosPerView)
+            .map((video, i) => ({
+                ...video,
+                originalIndex: this.currentIndex + i
+            }));
+    }
+
+    /**
+     * Navega a través de los videos
+     */
+    navigate(direction) {
+        const oldIndex = this.currentIndex;
+
+        if (direction === 'next') {
+            this.currentIndex = Math.min(
+                this.currentIndex + this.videosPerView,
+                this.videos.length - this.videosPerView
+            );
+        } else if (direction === 'prev') {
+            this.currentIndex = Math.max(this.currentIndex - this.videosPerView, 0);
+        }
+
+        if (oldIndex !== this.currentIndex) {
+            this.render();
+        }
     }
 
     /**
@@ -77,6 +141,11 @@ export class VideoGallery {
      * Abre el modal con el video de YouTube
      */
     openModal(index) {
+        // Salir del pointer lock si está activo
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+        
         const video = this.videos[index];
         this.createModal(video);
         
@@ -131,9 +200,14 @@ export class VideoGallery {
      */
     attachEventListeners() {
         const items = document.querySelectorAll(`#${this.containerId} .video-gallery__item`);
+        const prevBtn = document.querySelector(`#${this.containerId} .video-gallery__nav--prev`);
+        const nextBtn = document.querySelector(`#${this.containerId} .video-gallery__nav--next`);
         
+        // Click en videos - detener propagación para evitar activar otros eventos
         items.forEach(item => {
-            const listener = () => {
+            const listener = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const index = parseInt(item.dataset.index);
                 this.openModal(index);
             };
@@ -141,6 +215,27 @@ export class VideoGallery {
             item.addEventListener('click', listener);
             this.listeners.push({ element: item, event: 'click', handler: listener });
         });
+
+        // Navegación con flechas
+        if (prevBtn) {
+            const prevListener = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.navigate('prev');
+            };
+            prevBtn.addEventListener('click', prevListener);
+            this.listeners.push({ element: prevBtn, event: 'click', handler: prevListener });
+        }
+
+        if (nextBtn) {
+            const nextListener = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.navigate('next');
+            };
+            nextBtn.addEventListener('click', nextListener);
+            this.listeners.push({ element: nextBtn, event: 'click', handler: nextListener });
+        }
     }
 
     /**

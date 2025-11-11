@@ -109,6 +109,11 @@ export class Gallery {
      * Abre el modal con la imagen seleccionada
      */
     openModal(index) {
+        // Salir del pointer lock si está activo
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+        
         this.currentIndex = index;
         this.createModal();
         this.updateModalContent();
@@ -194,10 +199,12 @@ export class Gallery {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Listeners para items de galería (abrir modal)
+        // Listeners para items de galería (abrir modal) - detener propagación
         const items = container.querySelectorAll('.gallery__item');
         items.forEach(item => {
-            const listener = () => {
+            const listener = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const index = parseInt(item.dataset.index);
                 this.openModal(index);
             };
@@ -211,13 +218,21 @@ export class Gallery {
         const nextBtn = container.querySelector('.gallery__nav--next');
 
         if (prevBtn) {
-            const prevListener = () => this.navigateGallery('prev');
+            const prevListener = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.navigateGallery('prev');
+            };
             prevBtn.addEventListener('click', prevListener);
             this.listeners.push({ element: prevBtn, event: 'click', handler: prevListener });
         }
 
         if (nextBtn) {
-            const nextListener = () => this.navigateGallery('next');
+            const nextListener = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.navigateGallery('next');
+            };
             nextBtn.addEventListener('click', nextListener);
             this.listeners.push({ element: nextBtn, event: 'click', handler: nextListener });
         }

@@ -92,8 +92,16 @@ export class InputManager {
     }
 
     onMouseDown(e) {
-        // Solicitar pointer lock para vista libre
-        if (!state.ui.pointerLocked) {
+        // No solicitar pointer lock si se hace clic en elementos de UI
+        const isUIElement = e.target.closest('.video-gallery__item, .gallery__item, .video-gallery__nav, .gallery__nav, .video-modal, .image-modal, button, .game-section, .overlay');
+        
+        if (isUIElement) {
+            // Si es un elemento de UI, no activar pointer lock
+            return;
+        }
+        
+        // Solicitar pointer lock para vista libre solo si es el canvas
+        if (!state.ui.pointerLocked && e.target === this.renderer.domElement) {
             this.renderer.domElement.requestPointerLock?.();
         }
         

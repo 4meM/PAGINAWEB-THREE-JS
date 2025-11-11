@@ -104,6 +104,18 @@ export const PROGRESO_CONTENT = {
                 { type: 'video', youtubeId: 'QMEVDcjxyuA', alt: 'Demo del prototipo 1' },
                 { type: 'video', youtubeId: 'FZopgnWH78I', alt: 'Demo del prototipo 2' }
             ]
+        },
+        {
+            id: 4,
+            phase: "Juego Pruebas",
+            date: "Fase 4",
+            description: "Pruebas del juego en acción con realidad virtual.",
+            highlights: [],
+            media: [
+                { type: 'video', youtubeId: 'ctdocG9Jg1g', alt: 'Demo VR 1' },
+                { type: 'video', youtubeId: '1UD6Axfc9aM', alt: 'Demo VR 2' },
+                { type: 'video', youtubeId: 'ZXI_28143gU', alt: 'Demo VR 3' }
+            ]
         }
     ],
     
