@@ -116,6 +116,13 @@ export function createStarfield() {
 export function createStrut(pointA, pointB, color, radius = 0.12) {
     const dir = new THREE.Vector3().subVectors(pointB, pointA);
     const len = dir.length();
+    
+    // Validar que la longitud sea válida
+    if (len < 0.01 || !isFinite(len)) {
+        console.warn('createStrut: Invalid length', len, pointA, pointB);
+        return new THREE.Group(); // Retornar grupo vacío
+    }
+    
     const mid = new THREE.Vector3().addVectors(pointA, pointB).multiplyScalar(0.5);
     
     const tube = new THREE.Mesh(

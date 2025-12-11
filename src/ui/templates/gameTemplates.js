@@ -5,6 +5,7 @@
  */
 
 import { JUGABILIDAD_CONTENT, PROGRESO_CONTENT, COMUNIDAD_CONTENT } from '../../data/gameContent.js';
+import { MOMENTOS_CONTENT, NECESIDADES_CONTENT, ENTREVISTAS_CONTENT, STORYBOARD_CONTENT } from '../../data/proyectoContent.js';
 
 /**
  * Template base para secciones de juego
@@ -248,6 +249,99 @@ class ComunidadTemplate extends SectionTemplate {
 }
 
 /**
+ * Template para Momentos Interesantes
+ */
+class MomentosTemplate extends SectionTemplate {
+    renderContent() {
+        return `
+            <div class="game-section__body">
+                <p class="game-section__description">${this.content.description}</p>
+                ${this.content.sections.map(section => `
+                    <div class="content-block">
+                        <h3>${section.title}</h3>
+                        <p>${section.content}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Template para Necesidades
+ */
+class NecesidadesTemplate extends SectionTemplate {
+    renderContent() {
+        return `
+            <div class="game-section__body">
+                <p class="game-section__description">${this.content.description}</p>
+                ${this.content.sections.map(section => `
+                    <div class="content-block">
+                        <h3>${section.title}</h3>
+                        <p>${section.content}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Template para Entrevistas
+ */
+class EntrevistasTemplate extends SectionTemplate {
+    renderContent() {
+        return `
+            <div class="game-section__body">
+                <p class="game-section__description">${this.content.description}</p>
+                
+                <!-- Grid de Personas -->
+                <div class="entrevistas-personas-grid">
+                    ${this.content.personas.map((persona, personaIndex) => `
+                        <div class="entrevistas-persona-card">
+                            <h3 class="persona-name">${persona.name}</h3>
+                            <div class="entrevistas-list">
+                                ${persona.entrevistas.map((entrevista, entrevistaIndex) => {
+                                    const icon = entrevista.type === 'audio' ? '🎵' : '🎥';
+                                    return `
+                                    <button 
+                                        class="entrevista-button" 
+                                        data-drive-id="${entrevista.driveId}"
+                                        data-title="${persona.name} - ${entrevista.title}"
+                                        data-type="${entrevista.type || 'video'}"
+                                    >
+                                        ${icon} ${entrevista.title}
+                                    </button>
+                                `}).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Template para Storyboard
+ */
+class StoryboardTemplate extends SectionTemplate {
+    renderContent() {
+        return `
+            <div class="game-section__body">
+                <p class="game-section__description">${this.content.description}</p>
+                ${this.content.sections.map(section => `
+                    <div class="content-block">
+                        <h3>${section.title}</h3>
+                        <p>${section.content}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+/**
  * Factory para crear templates
  */
 export class GameTemplateFactory {
@@ -259,6 +353,14 @@ export class GameTemplateFactory {
                 return new ProgresoTemplate(PROGRESO_CONTENT);
             case 'comunidad':
                 return new ComunidadTemplate(COMUNIDAD_CONTENT);
+            case 'momentos':
+                return new MomentosTemplate(MOMENTOS_CONTENT);
+            case 'necesidades':
+                return new NecesidadesTemplate(NECESIDADES_CONTENT);
+            case 'entrevistas':
+                return new EntrevistasTemplate(ENTREVISTAS_CONTENT);
+            case 'storyboard':
+                return new StoryboardTemplate(STORYBOARD_CONTENT);
             default:
                 throw new Error(`Unknown module: ${moduleName}`);
         }

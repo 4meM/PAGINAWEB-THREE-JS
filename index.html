@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <!-- UI Overlay (no interfiere con interacciones 3D) -->
@@ -101,8 +101,33 @@
                 </div>
             </div>
 
+            <!-- Proyecto Module Overlays (Momentos, Necesidades, Entrevistas, Storyboard) -->
+            <div id="section-momentos" class="section section--game-module" aria-hidden="true">
+                <div id="momentos-content" class="section__content">
+                    <!-- Content will be dynamically loaded by ContentManager -->
+                </div>
+            </div>
+
+            <div id="section-necesidades" class="section section--game-module" aria-hidden="true">
+                <div id="necesidades-content" class="section__content">
+                    <!-- Content will be dynamically loaded by ContentManager -->
+                </div>
+            </div>
+
+            <div id="section-entrevistas" class="section section--game-module" aria-hidden="true">
+                <div id="entrevistas-content" class="section__content">
+                    <!-- Content will be dynamically loaded by ContentManager -->
+                </div>
+            </div>
+
+            <div id="section-storyboard" class="section section--game-module" aria-hidden="true">
+                <div id="storyboard-content" class="section__content">
+                    <!-- Content will be dynamically loaded by ContentManager -->
+                </div>
+            </div>
+
     <div id="prompt" class="prompt" aria-live="polite" aria-hidden="true">Presiona Enter para entrar</div>
     <div class="vignette" aria-hidden="true"></div>
-    <script type="module" src="main.js?v=3"></script>
+    <script type="module" src="main.js?v=10"></script>
 </body>
 </html>

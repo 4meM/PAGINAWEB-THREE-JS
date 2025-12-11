@@ -65,7 +65,7 @@ export class Portal {
             new THREE.MeshBasicMaterial({
                 color: this.color,
                 transparent: true,
-                opacity: 0.14
+                opacity: 0.2
             })
         );
         this.group.add(this.plane);
@@ -96,7 +96,66 @@ export class Portal {
             return this.loadGLTF(DEFAULT_MODEL.url, DEFAULT_MODEL);
         }
 
+        // Detectar si es una imagen (PNG, JPG, JPEG)
+        const isImage = /\.(png|jpe?g)$/i.test(primaryUrl);
+        
+        if (isImage) {
+            return this.loadImageSprite(primaryUrl, config);
+        }
+
         return this.loadGLTF(primaryUrl, config, fallbackUrl);
+    }
+
+    loadImageSprite(url, config) {
+        console.log(`Portal ${this.name}: Loading image sprite (${url})`);
+        
+        return new Promise((resolve, reject) => {
+            const textureLoader = new THREE.TextureLoader();
+            
+            textureLoader.load(
+                url,
+                (texture) => {
+                    // Crear sprite material con la textura
+                    const spriteMaterial = new THREE.SpriteMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: 1.0,
+                        depthTest: false,
+                        depthWrite: false,
+                        sizeAttenuation: true
+                    });
+                    
+                    // Crear sprite
+                    const sprite = new THREE.Sprite(spriteMaterial);
+                    sprite.renderOrder = 1;
+                    
+                    // Configurar escala (por defecto 2.5x2.5 para que se vea bien en el portal)
+                    const scale = config.scale || 2.5;
+                    sprite.scale.set(scale, scale, 1);
+                    
+                    // Configurar posición Y si hay offset
+                    const yOffset = config.yOffset || 0;
+                    sprite.position.y = yOffset;
+                    
+                    // Configurar posición Z para que esté detrás del anillo
+                    const zOffset = config.zOffset || 0;
+                    sprite.position.z = zOffset;
+                    
+                    // Agregar el sprite al grupo
+                    this.model = sprite;
+                    this.group.add(sprite);
+                    this.isModelLoaded = true;
+                    
+                    console.log(`Portal ${this.name}: Image sprite loaded successfully`);
+                    resolve();
+                },
+                undefined,
+                (error) => {
+                    console.error(`Portal ${this.name}: Failed to load image ${url}`, error);
+                    reject(error);
+                }
+            );
+        });
     }
 
     loadGLTF(url, config, fallbackUrl = null) {

@@ -9,6 +9,7 @@ import { Gallery } from './components/Gallery.js';
 import { VideoGallery } from './components/VideoGallery.js';
 import { Timeline } from './components/Timeline.js';
 import { JUGABILIDAD_CONTENT, PROGRESO_CONTENT, COMUNIDAD_CONTENT } from '../data/gameContent.js';
+import { MOMENTOS_CONTENT, NECESIDADES_CONTENT, ENTREVISTAS_CONTENT, STORYBOARD_CONTENT } from '../data/proyectoContent.js';
 
 export class ContentManager {
     constructor() {
@@ -56,6 +57,18 @@ export class ContentManager {
             case 'comunidad':
                 this.initializeComunidadComponents();
                 break;
+            case 'momentos':
+                this.initializeMomentosComponents();
+                break;
+            case 'necesidades':
+                this.initializeNecesidadesComponents();
+                break;
+            case 'entrevistas':
+                this.initializeEntrevistasComponents();
+                break;
+            case 'storyboard':
+                this.initializeStoryboardComponents();
+                break;
         }
     }
 
@@ -89,6 +102,50 @@ export class ContentManager {
     initializeComunidadComponents() {
         // Por ahora solo HTML estático, pero se pueden agregar componentes interactivos
         console.log('Comunidad components initialized');
+    }
+
+    /**
+     * Inicializa componentes de Momentos Interesantes
+     */
+    initializeMomentosComponents() {
+        console.log('Momentos components initialized');
+    }
+
+    /**
+     * Inicializa componentes de Necesidades
+     */
+    initializeNecesidadesComponents() {
+        console.log('Necesidades components initialized');
+    }
+
+    /**
+     * Inicializa componentes de Entrevistas
+     */
+    initializeEntrevistasComponents() {
+        // Importar dinámicamente el DriveVideoOverlay
+        import('../../components/DriveVideoOverlay.js').then(module => {
+            const { openDriveVideoOverlay } = module;
+            
+            // Agregar event listeners a todos los botones de entrevistas
+            const entrevistaButtons = document.querySelectorAll('.entrevista-button');
+            entrevistaButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const driveId = button.getAttribute('data-drive-id');
+                    const title = button.getAttribute('data-title');
+                    const type = button.getAttribute('data-type') || 'video';
+                    openDriveVideoOverlay(driveId, title, type);
+                });
+            });
+            
+            console.log(`✓ Entrevistas components initialized (${entrevistaButtons.length} buttons)`);
+        });
+    }
+
+    /**
+     * Inicializa componentes de Storyboard
+     */
+    initializeStoryboardComponents() {
+        console.log('Storyboard components initialized');
     }
 
     /**

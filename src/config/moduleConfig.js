@@ -47,7 +47,12 @@ export const MODULE_DEFINITIONS = [
         name: 'Proyecto',
         color: 0xffff66,
         description: 'Innovación IHC',
-        model: null // Usará el modelo por defecto
+        model: {
+            url: 'images/logo-proyecto.png',
+            scale: 5.0,
+            yOffset: 0,
+            zOffset: -0.5
+        }
     }
 ];
 

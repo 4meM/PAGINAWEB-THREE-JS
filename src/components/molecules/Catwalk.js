@@ -28,11 +28,9 @@ export class Catwalk {
     }
 
     build() {
-        const deckY = 0.63 + 0.025; // Altura del deck
+        // Usar la altura promedio de los dos puntos
         const aFlat = this.pointA.clone();
-        aFlat.y = deckY;
         const bFlat = this.pointB.clone();
-        bFlat.y = deckY;
 
         const dir = new THREE.Vector3().subVectors(bFlat, aFlat);
         const len = dir.length();

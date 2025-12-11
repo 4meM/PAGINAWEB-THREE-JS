@@ -52,13 +52,38 @@ class App {
             this.uiManager.closeGameModule();
         });
 
-        // Desbloquear PlayerController cuando se cierra un módulo
+        // Desbloquear PlayerController cuando se cierra un módulo de juego
         window.addEventListener('gameModuleClosed', () => {
             // Esperar un momento antes de permitir nuevas transiciones
             // Esto evita que se reactive inmediatamente al cerrar
             setTimeout(() => {
                 this.playerController.isTransitioning = false;
             }, 500);
+        });
+
+        // Escuchar evento de apertura de módulo de proyecto
+        window.addEventListener('openProyectoModule', (e) => {
+            this.uiManager.openProyectoModule(e.detail.moduleName);
+        });
+
+        // Escuchar evento de cierre de módulo de proyecto
+        window.addEventListener('closeProyectoModule', () => {
+            this.uiManager.closeProyectoModule();
+        });
+
+        // Desbloquear PlayerController cuando se cierra un módulo de proyecto
+        window.addEventListener('proyectoModuleClosed', () => {
+            console.log('✓ Event proyectoModuleClosed received');
+            setTimeout(() => {
+                this.playerController.isTransitioning = false;
+                console.log('✓ PlayerController: isTransitioning = false');
+                
+                // Reactivar pointer lock automáticamente
+                if (!state.ui.pointerLocked) {
+                    console.log('✓ Requesting pointer lock...');
+                    document.body.requestPointerLock();
+                }
+            }, 100);
         });
 
         console.log('✓ Application initialized!');

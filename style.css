@@ -204,9 +204,7 @@ canvas {
 }
 
 .section[aria-hidden="true"] {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
+    display: none !important;
 }
 
 .section[aria-hidden="false"] {
@@ -1993,6 +1991,70 @@ canvas {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* ====================================
+   ENTREVISTAS - PERSONAS GRID
+   ==================================== */
+
+.entrevistas-personas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+}
+
+.entrevistas-persona-card {
+    background: rgba(20, 32, 43, 0.6);
+    border: 1px solid rgba(108, 249, 255, 0.2);
+    border-radius: 12px;
+    padding: var(--space-lg);
+    transition: all 0.3s ease;
+}
+
+.entrevistas-persona-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(108, 249, 255, 0.5);
+    box-shadow: 0 8px 24px rgba(108, 249, 255, 0.15);
+}
+
+.persona-name {
+    font-size: var(--text-xl);
+    color: var(--color-primary);
+    margin-bottom: var(--space-md);
+    font-weight: 600;
+    text-align: center;
+}
+
+.entrevistas-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.entrevista-button {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 212, 255, 0.05));
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    padding: var(--space-md);
+    font-size: var(--text-base);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.entrevista-button:hover {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.1));
+    border-color: rgba(0, 212, 255, 0.6);
+    transform: translateX(4px);
+}
+
+.entrevista-button:active {
+    transform: translateX(2px);
 }
 
 

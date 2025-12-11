@@ -14,12 +14,23 @@ export class PlayerController {
         this.lastCamPos = camera.position.clone();
         this.sceneManager = sceneManager;
         this.isTransitioning = false; // Flag para bloquear movimiento durante transiciones
+        this.isInitializing = true; // Flag para evitar detección de portales al inicio
+        this.initFrameCount = 0; // Contador de frames desde inicio
     }
 
     /**
      * Actualiza el jugador cada frame
      */
     update(delta) {
+        // Desactivar flag de inicialización después de 60 frames (~1 segundo)
+        if (this.isInitializing) {
+            this.initFrameCount++;
+            if (this.initFrameCount > 60) {
+                this.isInitializing = false;
+                console.log('PlayerController: Initialization complete, portal detection enabled');
+            }
+        }
+        
         this.updateMovement(delta);
         this.updatePhysics(delta);
         this.updateCamera();
@@ -174,7 +185,8 @@ export class PlayerController {
      * Detecta si el jugador está colisionando frontalmente con un portal
      */
     checkPortalTraversal() {
-        if (!this.sceneManager || this.isTransitioning) return;
+        // No detectar durante inicialización, transición o si hay overlay activo
+        if (this.isInitializing || !this.sceneManager || this.isTransitioning) return;
 
         const playerPos = this.camera.position.clone();
         
@@ -210,7 +222,8 @@ export class PlayerController {
             if (hitPortal) {
                 const portalName = hitPortal.name.toLowerCase();
                 const gameModules = ['jugabilidad', 'progreso', 'comunidad'];
-                const mainSections = ['inicio', 'proyecto']; // Secciones principales con overlays simples
+                const proyectoModules = ['momentos', 'necesidades', 'entrevistas', 'storyboard'];
+                const mainSections = ['inicio']; // Solo Inicio usa overlay simple
                 
                 // PRINCIPIO DE FEEDBACK: No permitir nuevas interacciones si hay overlay activo
                 // Esto previene confusión del usuario (Principio de Gestalt: Ley de Prägnanz)
@@ -220,11 +233,15 @@ export class PlayerController {
                 if (hitPortal.isExitPortal && !hasActiveOverlay) {
                     this.transitionToScene('main', 0, 5, 0);
                 } 
-                // Portal principal "Juego"
+                // Portal principal "Juego" - carga escena interior
                 else if (portalName === 'juego' && !hasActiveOverlay) {
                     this.transitionToScene('game', 0, 5, 0);
                 }
-                // Portales de secciones principales (Inicio, Proyecto)
+                // Portal principal "Proyecto" - carga escena interior
+                else if (portalName === 'proyecto' && !hasActiveOverlay) {
+                    this.transitionToScene('proyecto', 0, 5, 0);
+                }
+                // Portales de secciones principales que usan overlay (solo Inicio)
                 else if (mainSections.includes(portalName) && !hasActiveOverlay) {
                     this.openMainSectionByTraversal(portalName);
                 }
@@ -232,6 +249,10 @@ export class PlayerController {
                 // SOLO si no hay overlay abierto (Consistencia de interacción)
                 else if (gameModules.includes(portalName) && !hasActiveOverlay) {
                     this.openGameModuleByTraversal(portalName);
+                }
+                // Portales de módulos de proyecto (Momentos, Necesidades, Entrevistas, Storyboard)
+                else if (proyectoModules.includes(portalName) && !hasActiveOverlay) {
+                    this.openProyectoModuleByTraversal(portalName);
                 }
             }
         }
@@ -338,6 +359,55 @@ export class PlayerController {
             // Cooldown largo para evitar re-activaciones
             // Solo se desbloqueará cuando se cierre el overlay
             // NO desbloquear automáticamente aquí
+        }, 400);
+    }
+
+    /**
+     * Abre un módulo de proyecto cuando el jugador atraviesa su portal
+     */
+    openProyectoModuleByTraversal(moduleName) {
+        // Solo activar si no está ya en transición
+        if (this.isTransitioning) return;
+        
+        this.isTransitioning = true;
+        console.log(`✓ PlayerController: isTransitioning = true`);
+        
+        console.log(`Opening proyecto module by traversal: ${moduleName}`);
+        
+        // Empujar al jugador hacia atrás para sacarlo del portal
+        const backward = new THREE.Vector3(
+            Math.sin(state.camera.yaw),
+            0,
+            Math.cos(state.camera.yaw)
+        ).normalize().multiplyScalar(1.5);
+        
+        this.camera.position.add(backward);
+        
+        // Transición visual con flash
+        const flashEl = document.getElementById('flash');
+        if (flashEl) {
+            flashEl.setAttribute('aria-hidden', 'false');
+        }
+
+        // Después del flash, abrir el módulo
+        setTimeout(() => {
+            // Ocultar flash
+            if (flashEl) {
+                flashEl.setAttribute('aria-hidden', 'true');
+            }
+            
+            // Emitir evento para que UIManager maneje el módulo
+            const event = new CustomEvent('openProyectoModule', { 
+                detail: { moduleName } 
+            });
+            window.dispatchEvent(event);
+            
+            // Desbloquear pointer
+            if (state.ui.pointerLocked) {
+                document.exitPointerLock();
+            }
+            
+            // Cooldown largo - se desbloqueará cuando se cierre el overlay
         }, 400);
     }
 

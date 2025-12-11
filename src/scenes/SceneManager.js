@@ -6,6 +6,7 @@
 
 import { MainScene } from './MainScene.js';
 import { GameScene } from './GameScene.js';
+import { ProyectoScene } from './ProyectoScene.js';
 import { state } from '../core/State.js';
 
 export class SceneManager {
@@ -19,6 +20,7 @@ export class SceneManager {
         // Registrar escenas disponibles
         this.registerScene('main', MainScene);
         this.registerScene('game', GameScene);
+        this.registerScene('proyecto', ProyectoScene);
     }
 
     registerScene(name, SceneClass) {
