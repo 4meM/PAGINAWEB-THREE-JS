@@ -1,0 +1,20 @@
+{
+  "name": "paginaweb-three",
+  "version": "1.0.0",
+  "description": "Este proyecto ha sido refactorizado siguiendo los principios de **Atomic Design** y una **arquitectura modular** similar a la usada en frameworks modernos como React, Vue y Angular.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/4meM/PAGINAWEB-THREE-JS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/4meM/PAGINAWEB-THREE-JS/issues"
+  },
+  "homepage": "https://github.com/4meM/PAGINAWEB-THREE-JS#readme"
+}

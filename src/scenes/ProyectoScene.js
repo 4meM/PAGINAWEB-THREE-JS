@@ -19,7 +19,7 @@ export class ProyectoScene {
     }
 
     async load() {
-        console.log('Loading ProyectoScene...');
+        console.log('Cargando ProyectoScene...');
         
         // Crear campo de estrellas con colores azules
         this.starfield = createStarfield(3000, 500, 0x4a90e2);
