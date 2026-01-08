@@ -168,6 +168,16 @@ export class PlayerController {
         if (closestPortal && closestPortal !== state.ui.hoveredPortal) {
             state.ui.hoveredPortal = closestPortal;
             // No mostrar prompt, solo marcar el portal cercano
+            // Si el portal cercano es 'prototipo', abrir su overlay automáticamente (igual que entrevistas pero al acercarse)
+            try {
+                const pname = (closestPortal.name || '').toLowerCase();
+                if (pname === 'prototipo' && !state.ui.activeSection) {
+                    const event = new CustomEvent('openProyectoModule', { detail: { moduleName: 'prototipo' } });
+                    window.dispatchEvent(event);
+                }
+            } catch (e) {
+                console.warn('Error dispatching openProyectoModule for prototipo', e);
+            }
         } else if (!closestPortal && state.ui.hoveredPortal) {
             state.ui.hoveredPortal = null;
         }

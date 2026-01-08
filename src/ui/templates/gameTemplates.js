@@ -5,7 +5,7 @@
  */
 
 import { JUGABILIDAD_CONTENT, PROGRESO_CONTENT, COMUNIDAD_CONTENT } from '../../data/gameContent.js';
-import { MOMENTOS_CONTENT, NECESIDADES_CONTENT, ENTREVISTAS_CONTENT, STORYBOARD_CONTENT } from '../../data/proyectoContent.js';
+import { MOMENTOS_CONTENT, NECESIDADES_CONTENT, ENTREVISTAS_CONTENT, STORYBOARD_CONTENT, PROTOTIPO_CONTENT } from '../../data/proyectoContent.js';
 
 /**
  * Template base para secciones de juego
@@ -253,6 +253,22 @@ class ComunidadTemplate extends SectionTemplate {
  */
 class MomentosTemplate extends SectionTemplate {
     renderContent() {
+        // If there are videos, render them as front-facing buttons (one per video)
+        if (this.content.videos && this.content.videos.length) {
+            return `
+                <div class="game-section__body">
+                    ${this.content.videos.map(v => `
+                        <div class="momento-video-block" style="margin-bottom:12px;">
+                            <h3 class="momento-title">${v.title}</h3>
+                            <div>
+                                <button class="button button--primary momento-video-button" data-drive-id="${v.driveId}" data-title="${v.title}" data-type="${v.type || 'video'}">▶ VIDEO</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         return `
             <div class="game-section__body">
                 <p class="game-section__description">${this.content.description}</p>
@@ -323,19 +339,51 @@ class EntrevistasTemplate extends SectionTemplate {
 }
 
 /**
+ * Template para Prototipo
+ */
+class PrototipoTemplate extends SectionTemplate {
+    renderContent() {
+        return `
+            <div class="game-section__body">
+                <div class="prototipo-videos" style="display:flex; gap:12px; flex-direction:column;">
+                    ${this.content.videos ? this.content.videos.map(video => `
+                        <button
+                            class="button button--primary prototipo-video-button"
+                            data-drive-id="${video.driveId}"
+                            data-title="${video.title}"
+                            data-type="${video.type || 'video'}"
+                        >
+                            ▶ ${video.title}
+                        </button>
+                    `).join('') : ''}
+                </div>
+            </div>
+        `;
+    }
+}
+
+/**
  * Template para Storyboard
  */
 class StoryboardTemplate extends SectionTemplate {
     renderContent() {
         return `
             <div class="game-section__body">
-                <p class="game-section__description">${this.content.description}</p>
-                ${this.content.sections.map(section => `
-                    <div class="content-block">
-                        <h3>${section.title}</h3>
-                        <p>${section.content}</p>
+                ${this.content.videos ? this.content.videos.map((v, i) => `
+                    <div class="storyboard-block" style="margin-bottom:18px;">
+                        <h3 class="storyboard-phase">${v.phase || ('FASE ' + (i+1))}</h3>
+                        <div>
+                            <button 
+                                class="button button--primary storyboard-video-button"
+                                data-drive-id="${v.driveId}"
+                                data-title="${v.title || ('FASE ' + (i+1))}"
+                                data-type="video"
+                            >
+                                ▶ VIDEO
+                            </button>
+                        </div>
                     </div>
-                `).join('')}
+                `).join('') : ''}
             </div>
         `;
     }
@@ -359,6 +407,8 @@ export class GameTemplateFactory {
                 return new NecesidadesTemplate(NECESIDADES_CONTENT);
             case 'entrevistas':
                 return new EntrevistasTemplate(ENTREVISTAS_CONTENT);
+            case 'prototipo':
+                return new PrototipoTemplate(PROTOTIPO_CONTENT);
             case 'storyboard':
                 return new StoryboardTemplate(STORYBOARD_CONTENT);
             default:

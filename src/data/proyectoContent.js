@@ -13,6 +13,14 @@ export const MOMENTOS_CONTENT = {
         }
     ]
 };
+// Video agregado solicitado por el usuario para el módulo Momentos
+MOMENTOS_CONTENT.videos = [
+    {
+        title: 'Momento - Video',
+        driveId: '1a3ePBheMBEx1kHvJeL9SZBQiz6MV2jqY',
+        type: 'video'
+    }
+];
 
 export const NECESIDADES_CONTENT = {
     title: 'Necesidades del Usuario',
@@ -73,13 +81,44 @@ export const ENTREVISTAS_CONTENT = {
     ]
 };
 
+export const PROTOTIPO_CONTENT = {
+    title: 'Prototipo',
+    videos: [
+        {
+            title: 'Pruebas del Prototipo con Usuarios',
+            driveId: '1nkhd440Fz0_tFBYUOPy-D7QdY5lgVC3w',
+            type: 'video'
+        },
+        {
+            title: 'Funcionamiento de la Aplicacion',
+            driveId: '1C-uT1ZPO1w9cvVWgeaLJ77d9ixI_LDiy',
+            type: 'video'
+        }
+    ]
+};
+
 export const STORYBOARD_CONTENT = {
     title: 'Storyboard',
-    description: 'Visualización del flujo de experiencia del usuario.',
-    sections: [
+    videos: [
         {
-            title: 'Introducción',
-            content: 'El storyboard muestra el journey del usuario a través de nuestra solución.'
+            phase: 'FASE 1',
+            title: 'FASE 1',
+            driveId: '1tH6dzJ7K8L9rcnwmva4hj0BoZOgAnMv_'
+        },
+        {
+            phase: 'FASE 2',
+            title: 'FASE 2',
+            driveId: '1Tfn3dTUgNQNqwMJ5iDEK4OT8InKg6Czl'
+        },
+        {
+            phase: 'FASE 3',
+            title: 'FASE 3',
+            driveId: '1HkPUPXWu7l08ml6PxAPSnwhqAcgdPBpi'
+        },
+        {
+            phase: 'FASE 4',
+            title: 'FASE 4',
+            driveId: '1-cQQTBXe4I7AzwzDU_NKRhPbo5vC2eWE'
         }
     ]
 };

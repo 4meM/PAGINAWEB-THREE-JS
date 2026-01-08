@@ -66,6 +66,9 @@ export class ContentManager {
             case 'entrevistas':
                 this.initializeEntrevistasComponents();
                 break;
+            case 'prototipo':
+                this.initializePrototipoComponents();
+                break;
             case 'storyboard':
                 this.initializeStoryboardComponents();
                 break;
@@ -108,7 +111,24 @@ export class ContentManager {
      * Inicializa componentes de Momentos Interesantes
      */
     initializeMomentosComponents() {
-        console.log('Momentos components initialized');
+        // Inicializar botones frontales para los videos del módulo Momentos
+        import('../../components/DriveVideoOverlay.js').then(module => {
+            const { openDriveVideoOverlay } = module;
+
+            const buttons = document.querySelectorAll('.momento-video-button');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const driveId = btn.getAttribute('data-drive-id');
+                    const title = btn.getAttribute('data-title');
+                    const type = btn.getAttribute('data-type') || 'video';
+                    openDriveVideoOverlay(driveId, title, type);
+                });
+            });
+
+            console.log(`✓ Momentos components initialized (${buttons.length} buttons)`);
+        }).catch(err => {
+            console.warn('Failed to initialize Momentos components', err);
+        });
     }
 
     /**
@@ -142,10 +162,48 @@ export class ContentManager {
     }
 
     /**
+     * Inicializa componentes del módulo Prototipo (botones de video frontales)
+     */
+    initializePrototipoComponents() {
+        import('../../components/DriveVideoOverlay.js').then(module => {
+            const { openDriveVideoOverlay } = module;
+
+            const buttons = document.querySelectorAll('.prototipo-video-button');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const driveId = btn.getAttribute('data-drive-id');
+                    const title = btn.getAttribute('data-title');
+                    const type = btn.getAttribute('data-type') || 'video';
+                    openDriveVideoOverlay(driveId, title, type);
+                });
+            });
+
+            console.log(`✓ Prototipo components initialized (${buttons.length} buttons)`);
+        });
+    }
+
+    /**
      * Inicializa componentes de Storyboard
      */
     initializeStoryboardComponents() {
-        console.log('Storyboard components initialized');
+        // Inicializar botones frontales para los videos del storyboard
+        import('../../components/DriveVideoOverlay.js').then(module => {
+            const { openDriveVideoOverlay } = module;
+
+            const buttons = document.querySelectorAll('.storyboard-video-button');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const driveId = btn.getAttribute('data-drive-id');
+                    const title = btn.getAttribute('data-title');
+                    const type = btn.getAttribute('data-type') || 'video';
+                    openDriveVideoOverlay(driveId, title, type);
+                });
+            });
+
+            console.log(`✓ Storyboard components initialized (${buttons.length} buttons)`);
+        }).catch(err => {
+            console.warn('Failed to initialize Storyboard components', err);
+        });
     }
 
     /**

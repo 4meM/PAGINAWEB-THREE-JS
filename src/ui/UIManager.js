@@ -60,7 +60,7 @@ export class UIManager {
         if (!this.elements.proyectoModuleOverlays) {
             this.elements.proyectoModuleOverlays = {};
         }
-        ['momentos', 'necesidades', 'entrevistas', 'storyboard'].forEach(id => {
+        ['momentos', 'necesidades', 'entrevistas', 'prototipo', 'storyboard'].forEach(id => {
             const el = document.getElementById(`section-${id}`);
             if (el) {
                 this.elements.proyectoModuleOverlays[id] = el;

@@ -38,8 +38,8 @@ export class ProyectoStation {
         this.group.add(this.hub.getGroup());
 
         const R = this.config.portalRadius;
-        // 5 portales distribuidos equitativamente (360° / 5 = 72° entre cada uno)
-        const numTotalPortals = 5;
+        // Calcular portales dinámicamente: todos los módulos + 1 portal de salida
+        const numTotalPortals = this.moduleDefinitions.length + 1;
         const angleStep = (2 * Math.PI) / numTotalPortals;
         
         // Construir cada módulo con su portal (primeros 4)
@@ -94,8 +94,8 @@ export class ProyectoStation {
             this.createLandingPad(to, facing);
         }
 
-        // PORTAL DE SALIDA (quinta posición en la distribución equitativa)
-        const exitAngle = 4 * angleStep;
+        // PORTAL DE SALIDA (última posición en la distribución equitativa)
+        const exitAngle = this.moduleDefinitions.length * angleStep;
         const exitPos = new THREE.Vector3(Math.cos(exitAngle) * R, 0, Math.sin(exitAngle) * R);
         const exitFacing = new THREE.Vector3()
             .subVectors(new THREE.Vector3(0, 0, 0), exitPos)

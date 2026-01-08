@@ -22,6 +22,12 @@ export const PROYECTO_MODULE_DEFINITIONS = [
         model: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'
     },
     {
+        name: 'prototipo',
+        displayName: 'Prototipo',
+        color: 0x00ffcc,
+        model: 'vehicle_factory/scene.gltf'
+    },
+    {
         name: 'storyboard',
         displayName: 'Storyboard',
         color: 0xff00ff,
